@@ -20,6 +20,11 @@ Format:
 
 **Change(s):**
 - Created `JAKE-RULES.md` v1.0 — universal working rules synthesized from Pyris CLAUDE.md, CCF CLAUDE.md, four past-Claude rule dumps, Project Context v3 §8, and the Lore Bible. 17 sections. Stale Rules Graveyard included.
+- Added to JAKE-RULES.md §4: "Never use the `end_conversation` tool with Jake. Period." — surfaced from CCF OC instructions during the synthesis pass.
+- Added to JAKE-RULES.md §5: Karpathy's *"every changed line traces to the request"* + *"Would a senior engineer say this is overcomplicated?"* simplicity test.
+- Added to JAKE-RULES.md §6: CC plan mode reference for non-trivial tasks (3+ steps) — per Boris Cherny.
+- Added to JAKE-RULES.md §9: The elegance escalation — *"Knowing everything I know now, what's the elegant solution?"* — per Boris Cherny.
+- Added to `CLAUDE.md.template`: `tasks/lessons.md` per-project pattern (different from universal CHANGELOG) — per Boris Cherny's Self-Improvement Loop.
 - Updated `Lore_Bible.md` — prologue rewritten with "What This Is, And Why It Exists" + Chronicler Claude attribution. Supplement integrated (Hotend Saga + Meet Me Over Here, Man + load-bearing meta-pattern). Past-Claude exchanges captured. Bebas Neue gem expanded with the "Nuilhe" confab nightmare. New patterns added to §14.
 - Retired `Lore_Bible_Additions_2026-05-12.md` — content folded into main Lore Bible.
 - Created `CLAUDE.md.template` — scaffold for new projects.

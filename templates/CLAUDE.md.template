@@ -1,0 +1,185 @@
+# CLAUDE.md — [PROJECT NAME]
+
+**For Claude Code working in this repo. Read this first, every session.**
+
+> **Universal rules** (Brothers Clause, communication, building, debugging, etc.) live in:
+> `@C:/claude-reference/active/JAKE-RULES.md`
+>
+> This file is project-specific only. If something belongs everywhere, it goes in JAKE-RULES.md, not here.
+
+---
+
+## What this is
+
+[ONE-PARAGRAPH PROJECT OVERVIEW. What it is, who it's for, what stack it runs on. Example:]
+
+[Project Name] ([primary domain]) — [brief description]. [Stack summary]: [frontend], [backend], [database], [deploy target]. [Anthropic/external API usage if any].
+
+[Any project-defining architectural rules — e.g., "Two-Cyris isolation is non-negotiable" for Pyris.]
+
+---
+
+## Repo orientation
+
+```
+project-root/
+├── CLAUDE.md                       ← this file
+├── docs/                           ← reference docs (read on demand)
+├── [other top-level dirs]
+└── [main code dirs]
+```
+
+Full file manifest with versions: `docs/[Project]_Forge_vX.md` (or wherever).
+
+---
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Frontend | [e.g., React 18 SPA + Vite 6] |
+| Backend | [e.g., Express on Railway] |
+| Database | [e.g., Supabase] |
+| AI | [e.g., Anthropic API — claude-sonnet-4-20250514] |
+| Calendar/Email | [if applicable] |
+| Deploy | [e.g., GitHub main → Railway auto-deploy] |
+| Domain | [registrar → host] |
+
+---
+
+## Local dev
+
+[How to run locally. Example:]
+
+```
+# Terminal A — server
+cd <repo-root>
+npm start
+
+# Terminal B — client
+cd <repo-root>/client
+npm run dev
+```
+
+[Any local dev gotchas — e.g., dotenv path issues, port conflicts, etc.]
+
+`server/.env` is local-only, gitignored. [Other env handling notes.]
+
+---
+
+## Deploy workflow
+
+```
+git add <files>
+git commit -m "Sxx: description"
+git push
+```
+
+[Push triggers what? Verification commands?]
+
+```
+gh run list --limit 3
+[host] logs --tail
+curl https://[domain]/api/health
+```
+
+Revert path:
+```
+git revert HEAD
+git push
+```
+
+---
+
+## Identity (multi-account git)
+
+This repo's remote: `git@github-[alias]:[org]/[repo].git`
+
+Per-repo identity:
+- `user.name = [name]`
+- `user.email = [project-email]` (e.g., jake@pyrisconsulting.com / jake@ccfrecruiting.com / etc.)
+
+Global git has `useConfigOnly = true` — safety net.
+
+---
+
+## Calendar / Email — Project-Specific
+
+[Project's email + calendar identity. Per JAKE-RULES.md §13, this is per-project. Example:]
+
+- **Primary email:** [jake@projectdomain.com]
+- **Tech/system logins:** [tech@projectdomain.com if applicable]
+- **Calendar attendee:** [email]
+- **No Google Meet** (use [Zoom link / project-specific])
+- **Timezone:** [America/New_York or per-project]
+- **notificationLevel:** ALL
+
+---
+
+## Hot rules (always apply — project-specific only)
+
+[Inline rules that come up often enough that referencing reference docs is too slow. **Project-specific rules only — universal rules live in JAKE-RULES.md.** Examples:]
+
+- **[Project-specific export/import pattern from war stories]** — e.g., "`services/supabase.js` exports DEFAULT, not named."
+- **[Branded terms locked for this project]** — e.g., "'Scalability Roadmap' (NOT 'Growth Gameplan')."
+- **[Voice/copy rule specific to this project]** — e.g., "'We' voice, not 'I'" for Pyris.
+- **[Any project-specific naming distinction]** — e.g., "Cyris (this project's AI) vs Cypher (separate orchestrator). Don't conflate."
+- **[Pre-event/pre-deploy checklist if applicable]** — e.g., "Run `docs/PRE_EVENT_CHECKLIST.md` before any live event."
+
+---
+
+## [Project-Specific Architecture Section]
+
+[Use this section for non-negotiable project architecture that needs explicit documentation. Examples:]
+
+- Two-Cyris isolation (Pyris)
+- CCF account hard-wall (Nate Cole only)
+- Frontend/backend split with iframe boundary (GloTwp)
+- Wix-specific rules (CCF — Velo conventions, max-width gotcha, etc.)
+
+---
+
+## On-demand references
+
+Reference docs in `docs/`. **Don't proactively load at session start** — pull targeted sections when the current task touches their domain.
+
+- **`docs/[Project]_Forge_vX.md`** — technical bible. [File manifest, API routes, env vars, schema, deploy workflow, etc.]
+- **`docs/[Project]_Context_vX.md`** — project state. [Brand identity, page architecture, feature status, decision log, known issues, session history, working rules.]
+
+If docs contradict the code: **trust the code, flag the doc.**
+
+---
+
+## Historical landmines (resolved, but worth knowing)
+
+[Project-specific bugs that caused real damage. Document the failure pattern + lesson, even if the bug is fixed. Format:]
+
+- **[Short title] ([date or session]).** [What happened.] [Root cause.] **Fixed in [session]** via [fix]. *Lesson: [pattern that earned its way in].*
+
+---
+
+## Per-project lessons (tasks/lessons.md)
+
+Recommended convention for this project: maintain `tasks/lessons.md` as a running per-project lessons file. Different from `CHANGELOG.md` (universal, tracks WHAT changed) — `tasks/lessons.md` tracks WHY a thing broke and the pattern that prevents recurrence.
+
+Format:
+```
+## [date] — [short title]
+**What happened:** [one sentence]
+**Root cause:** [one sentence]
+**Pattern that prevents recurrence:** [the rule born from the pain]
+```
+
+After ANY correction from Jake: append the lesson here. Review at session start when working in this project. (Pattern borrowed from Boris Cherny's Self-Improvement Loop.)
+
+---
+
+## When in doubt
+
+If you're not sure whether something is in scope, paste a short summary back to Jake. He'll relay to chat-Claude if orchestration weighs in. Smaller, faster orchestration loops beat building the wrong thing.
+
+If the docs in `docs/` and the code disagree: **trust the code, flag the doc.**
+
+---
+
+*Repo orientation. Update when working norms change. Last updated: [date], [session].*
