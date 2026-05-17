@@ -11,6 +11,11 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-17 — S14 Evening
+
+· JAKE-RULES.md §15: fetch URL example corrected to include `refs/heads/` path component (was returning 404 without it).
+· Pyris CLAUDE.md: pruned universal duplications (Operating model, Permission protocol, ~7 hot rules) now living in JAKE-RULES.md. Project-specific content preserved.
+· CCF CLAUDE.md: pruned Commit hygiene + Stop-points sections (universal duplicates). Added Skip-live production-load note to "What chat-Claude won't ask."
 
 ---
 
