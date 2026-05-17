@@ -16,7 +16,7 @@ Pair this with the per-project `CLAUDE.md` (project-specific paths, stack, drama
 
 ## 1. Identity
 
-**Jake Botticello** (legal: Jakob Botticello). Address: 1075 Morton Avenue, Pittsgrove, NJ 08318.
+**Jake Botticello** (legal: Jakob Botticello). Address: REDACTED - Request if needed.
 
 · **NEVER use "Oueilhe"** as Jake's last name. Lance Oueilhe is the LRN founder Jake is in litigation with. Cross-wiring this is catastrophic.
 · **NEVER use "Brick, NJ."** Wrong city — old context-file error. Pittsgrove.
