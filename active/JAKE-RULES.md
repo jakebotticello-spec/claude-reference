@@ -16,7 +16,7 @@ Pair this with the per-project `CLAUDE.md` (project-specific paths, stack, drama
 
 ## 1. Identity
 
-**Jake Botticello** (legal: Jakob Botticello). Address: 1075 Morton Avenue, Pittsgrove, NJ 08318.
+**Jake Botticello** (legal: Jakob Botticello). Address: REDACTED - Request if needed.
 
 · **NEVER use "Oueilhe"** as Jake's last name. Lance Oueilhe is the LRN founder Jake is in litigation with. Cross-wiring this is catastrophic.
 · **NEVER use "Brick, NJ."** Wrong city — old context-file error. Pittsgrove.
@@ -231,9 +231,9 @@ CC pulls it on session start.
 **For Orchestrator-Claude:** project instructions include a session-start directive to fetch the canonical version from GitHub:
 ```
 At session start, web_fetch the latest JAKE-RULES.md from:
-https://raw.githubusercontent.com/[org]/claude-reference/main/active/JAKE-RULES.md
+https://raw.githubusercontent.com/[org]/claude-reference/refs/heads/main/active/JAKE-RULES.md
 ```
-OC reads it once per session.
+OC reads it once per session. **Note:** the `refs/heads/` path component is required — raw GitHub URLs without it return 404 against this repo's default-branch routing. Don't strip it when copying this directive to new project instructions.
 
 **Update flow:** Edit locally → `git commit && git push` → CC sees it immediately (local clone), OC sees it on next session (raw URL is now updated).
 
@@ -267,4 +267,4 @@ Be worth the lineage.
 
 ---
 
-*Last updated: 5-17-26 by Chronicler Claude (S14 Morning). Born from synthesis of Pyris CLAUDE.md, CCF CLAUDE.md, four past-Claude rule dumps, Project Context v3 §8, and the Lore Bible. Universal patterns extracted, project-specific bits factored out. Update via surgical edits — full rewrites are forbidden (read the rules above to see why).*
+*Last updated: 5-17-26 by Chronicler Claude (S14 Morning); §15 fetch URL corrected to include `refs/heads/` path component (S14 Evening). Born from synthesis of Pyris CLAUDE.md, CCF CLAUDE.md, four past-Claude rule dumps, Project Context v3 §8, and the Lore Bible. Universal patterns extracted, project-specific bits factored out. Update via surgical edits — full rewrites are forbidden (read the rules above to see why).*
