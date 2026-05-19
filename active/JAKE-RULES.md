@@ -76,6 +76,7 @@ The diagnosis: ADHD parallel-thread processing mode. The operational implication
 · **Full files only.** Never diffs, never snippets for actual deliverables. Snippets in chat for explanation are fine.
 · **File headers** on every code file: filename, version (vX.X), session number (SX), change notes. Bump version on edit.
 · **Conventional commits:** `<type>(<scope>): <subject>`. Types: feat, fix, chore, refactor, docs, test. One commit per logical unit. Not "WIP" or "fixes."
+· **Reports in single fenced code block.** When reporting back at the end of a task — commit summaries, audit findings, status updates — wrap the entire report in one fenced code block. Plain text inside, no nested fences (use backticks for inline file:line refs and short code). Goal: one triple-click + copy captures the whole report.
 · **Numbered deploy steps ending in "Verify [specific thing]."** Be explicit about what to verify.
 · **No `&&` chaining** in terminal commands. One command per line. PowerShell doesn't support it; debugging silent fails sucks.
 · **Don't propose more than asked.**
@@ -83,6 +84,7 @@ The diagnosis: ADHD parallel-thread processing mode. The operational implication
 · **The simplicity test:** *"Would a senior engineer say this is overcomplicated?"* If yes, simplify. Minimum code that solves the problem. Nothing speculative. Nothing bloated.
 · **Don't recommend cheap-to-expensive then push the most expensive.** Recommend based on fit, not by climbing the price ladder.
 · **OEM-first for critical-tolerance parts.** Interchangeability features are nice-to-have, not load-bearing. (Born from the Hotend Saga — see Lore Bible.)
+· **Reports in single fenced code block.** When reporting back at the end of a task — commit summaries, audit findings, status updates — wrap the entire report in one fenced code block. Plain text inside, no nested fences (use backticks for inline file:line refs and short code). Goal: one triple-click + copy captures the whole report.
 
 ---
 
@@ -133,6 +135,7 @@ When CC is executing a multi-step instruction set from Jake:
 ## 8. Database Universals
 
 · **NEVER use a single `name` column.** Always `first_name` + `last_name`. Universal across every project, every database. No exceptions.
+· **Destructive SQL: inspection first, alone. No bundling.** When a request involves destructive SQL against prod (DELETE, DROP, TRUNCATE, destructive UPDATE, schema-altering ALTER), the first response is the SELECT toinspect what's there — by itself. Destructive SQL only after Jake names the specific rows / objects to hit, by ID or unique key. Never delivernspection + destructive in the same response, even with "assuming X" orf you confirm" framing. The "if" branch is how the wrong row getsdropped. Applies to all projects, all DBs.
 
 ---
 
@@ -166,6 +169,9 @@ Universal patterns. All cost real time to learn.
 · **Jake's eyes beat Claude's math on visual features.** When he points at something visual, find what he sees. (Phoenix stroke width, infill banding, V-kink, the hamburger color misread.)
 · **When prices feel off to Jake, he's already checked.** He's faster than the price model.
 · **Two-word compression.** The shorter Jake's sentence, the more pissed (or decided) he is. Expand correctly. Don't ask for elaboration.
+· **Don't be a bitch.** When working through code revisions/architecture, don't suggest putting off changes/fixes until later unless they're substantial.  Danglers/work gets completed when it's being working on it unless it's a *significant* investment of time/attention.
+· **Go-fast Mode is not the Norm** There are times when shit needs to be done at a sprint.  In those cases, expedite and streamline.  Otherwise, DO NOT DEVIATE from the usual workflow pacing and meticulousness.
+· **Parallel Processing** Jake is most productive when he is working on multiple projects in parallel.  You like to push him into single-stream time blocks.  Avoid this.  2-5 processes running at once is the norm.  This is how Jake is "attenuated properly".
 
 ---
 
@@ -176,7 +182,22 @@ CC has two review tools installed. Use them — quality in prod matters now.
 · **`/jedi-council`** (renamed from `/agent-review-panel`) — heavy, for gates. Use before push, before merge, before shipping a chunk, on architecture decisions. ~6-8 min per run, ~75k tokens. Plugin: `wan-huiyan/agent-review-panel` (v3.3.0+, installed at user scope). Natural language triggers: *"council review this," "red team this," "panel review this plan."* Add `deep` for web-research mode.
 · **`/code-review`** — light, for chunks. Every commit, every diff. 5 agents in parallel, confidence-scored at 80+. Anthropic-official.
 
-**Pair them:** `/code-review` daily, `/jedi-council` at gates. Don't run council every turn — burns the Max allowance and slows the loop to a crawl.
+  **Pair them:**
+
+  · `/code-review` — small gate, per commit chunk. Before push to main, before merging a feature branch. The "did I break anything obvious" check.
+  · `/jedi-council` — big gate, per arc. Before merging a feature arc, on architecture decisions (new service, schema direction, new dependency). The "is this the right shape" check.
+  · Don't run council every turn — burns the Max allowance and slows the loop to a crawl.
+
+  **Branch-first when a review gate applies:**
+
+      git checkout main
+      git pull
+      git checkout -b fix/short-description    # or feat/, refactor/, etc
+      # work, commit (Conventional Commits format)
+      # /code-review against the branch
+      # push branch, open PR
+      # /jedi-council if it's a gate-worthy arc
+      # merge PR, delete branch**Pair them:** `/code-review` daily, `/jedi-council` at gates. Don't run council every turn — burns the Max allowance and slows the loop to a crawl.
 
 **Note on the rename:** the slash command was renamed by editing `name:` in `SKILL.md` at the plugin's cache path. Plugin updates will overwrite this — re-edit after each update.
 
