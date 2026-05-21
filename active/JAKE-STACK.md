@@ -143,6 +143,31 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · ANVISION 60mm 2-pack (arriving 5/21/26 — slim 15mm thick, dual ball bearing, 2-pin 2.5mm connector, 17.6 CFM @ 4000 RPM @ 30.7 dBA)
 · OCZ Vertex 2 60GB (install media)
 · PNY CS1311 240GB, Crucial BX500 240GB, Seagate Barracuda 750GB, WD Black 640GB, WD Caviar Green 1TB (available drives)
+· A GIANT PILE OF MOTHERBOARD WIRES ACCUMULATED OVER THE LAST 25 YEARS
+· The structural support-column of hard drives accumulated over the last 25 years - reference in LORE.md
+· All sorts of other random shit.  Ask and I've probably got one on hand.
+
+## 9. Email identity routing
+
+Each working identity has a specific email address. Routing depends on whether the touch is **persona-side** (the project communicating with Jake-as-person) or **dev-side** (Jake as system operator).
+
+### 9.1 Per-project map
+
+· **Pyris** — `jake@pyrisconsulting.com` for everything (no split — single business identity).
+· **CCF** — `jake@ccfrecruiting.com` (primary), `tech@ccfrecruiting.com` (tech-stack logins).
+· **Cypher / Ordo / Jango** — split. See §9.2.
+· **Personal default** — `jake.botticello@gmail.com`.
+
+### 9.2 Cypher persona / dev split
+
+Cypher and Ordo are personal tools (Cypher) and operator-facing tools (Ordo, Jango). The address depends on which surface is acting:
+
+· **Persona-side touches → `jake.botticello@gmail.com`.** The project communicating with Jake-the-person. Daily nudges, anchored-fact reflections, balance-low alerts, anything where the project is the speaker and Jake is the human listener.
+· **Dev-side touches → `jake@ethosteleos.dev`.** Jake as system operator. GCP project ownership, OAuth test-user identity for the Jango role, Anthropic console for the Cypher-tenant API key, infrastructure-vendor accounts.
+
+Same human, two surfaces. The split mirrors how Jake thinks about Cypher-as-tool vs Cypher-as-system.
+
+Jim's side has no split — `jim@ethosteleos.dev` for everything Ordo-related.
 
 ---
 

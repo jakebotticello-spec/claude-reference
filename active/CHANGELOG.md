@@ -14,6 +14,10 @@ Format:
 
 ---
 
+## 2026-05-21 — Cypher S:1 Boostrapping
+**Scope:** JAKE-STACK.md updated with Section 9, detailing which email accounts own what projects.
+
+
 ## 2026-05-21 — SD19 (Anniversary morning + Castle Black panic + rules architecture overhaul)
 
 **Scope:** Rules architecture (JAKE-RULES.md expansion + new JAKE-STACK.md), Castle Black diagnostic mitigation, infrastructure standing-risk updates.
