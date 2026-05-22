@@ -73,6 +73,10 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 ### Dashboard endpoint
 · `http://192.168.50.88:8765/status` — tiles: NAS · Last Backup · Router · Internet · Replicator (P1S) · Family (Life360)
 
+### Kiosk service
+· Castle Black now runs a status-kiosk.service (cage+cog→:8765/status) on tty1, driving the Acer. New standing infra.
+· The two scars, for the lineage: WLR_DRM_DEVICES is colon-separated so PCI by-path names blow up — use card1 (+ a udev alias later if you want renumber-safety); and a kiosk service needs Conflicts=getty@tty1 or it can't wrestle DRM master off the console. Both cost us a cycle; both worth a Lore Bible line so the next Claude doesn't re-buy them.
+
 ---
 
 ## 4. Network
