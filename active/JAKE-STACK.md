@@ -10,9 +10,9 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 
 ## 1. Workhorse — daily driver
 
-· **Role:** Primary workstation. Four-monitor station. Jake's hands-on machine for everything.
+· **Role:** Primary workstation. Three-monitor station. Jake's hands-on machine for everything.  48" ultrawidescreen (Decogear), 29" widescreen (LG), 27" widescreen (HP).
 · **OS:** Windows 11.
-· **Daily tooling:** Claude Code, Claude.ai (multiple parallel sessions), 1Password 8 (SSH agent + Environments), AHK macropad, Bambu Studio, browser cluster.
+· **Daily tooling:** Claude Code, Claude.ai (multiple parallel sessions), 1Password 8 (SSH agent + Environments), AHK macropad (VSD m18), Bambu Studio, browser cluster.
 · **Filesystem conventions:**
   · `C:\NASBackup\` — backup machinery, self-contained, `%~dp0` self-relative paths throughout
   · `C:\HA\` — homelab infrastructure files holding location
@@ -127,10 +127,10 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 
 ## 7. 3D print stack
 
-· **Printer:** Bambu P1S (workshop closet, beneath Castle Black)
+· **Printer:** Bambu P1S (workshop closet, above Castle Black, below Status Monitor monitor (~13 yo ACER, 1280x1024)
 · **Slicer:** Bambu Studio (P1S uses X1C profile — no native P1S profile exists)
-· **Heater block:** off-brand interchangeable-nozzle (NOT OEM geometry — don't assume Bambu OEM specs)
-· **AMS:** standard 4-slot
+· **Heater block:** now OEM Bambu Hotend assembly.
+· **AMS:** standard 4-slot.  AMS2Pro. Has drying capabilities.
 · **Camera:** Tapo C111 at `192.168.50.199` (powered independently — no longer USB-from-P1S, that failure mode is retired)
 
 ---
@@ -145,7 +145,7 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · PNY CS1311 240GB, Crucial BX500 240GB, Seagate Barracuda 750GB, WD Black 640GB, WD Caviar Green 1TB (available drives)
 · A GIANT PILE OF MOTHERBOARD WIRES ACCUMULATED OVER THE LAST 25 YEARS
 · The structural support-column of hard drives accumulated over the last 25 years - reference in LORE.md
-· All sorts of other random shit.  Ask and I've probably got one on hand.
+· All sorts of other random shit.  Ask and Jake's probably got one on hand.
 
 ## 9. Email identity routing
 
@@ -171,4 +171,4 @@ Jim's side has no split — `jim@ethosteleos.dev` for everything Ordo-related.
 
 ---
 
-*Last updated: 5-21-26 by SD19 Claude. Initial creation alongside JAKE-RULES.md expansion. Surgical edits only going forward.*
+*Last updated: 5-22-26 by Jake. Revised home hardware stack (added monitor info), corrected printer hardware. Initial creation alongside JAKE-RULES.md expansion. Surgical edits only going forward.*

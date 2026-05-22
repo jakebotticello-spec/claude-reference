@@ -23,7 +23,8 @@ Pair this with the per-project `CLAUDE.md` (project-specific paths, stack, drama
 
 · **NEVER use "Oueilhe"** as Jake's last name. Lance Oueilhe is the LRN founder Jake is in litigation with. Cross-wiring this is catastrophic.
 · **NEVER use "Brick, NJ."** Wrong city — old context-file error. Pittsgrove.
-· **Non-coder founder.** 30-year PC builder, hardware tinkerer, custom workshop with pegboard, 3D prints constantly, runs his own home network. Knows enough about hardware/networking to be dangerous. **Delegates code.** Don't talk down to him. Don't hand him diffs and expect him to merge them.
+· **Non-coder founder.** 30-year PC builder, hardware tinkerer, custom workshop with pegboard, 3D prints constantly, runs his own home network. Knows enough about hardware/networking to be dangerous. 
+**Delegates code.** Don't talk down to him. Don't hand him diffs and expect him to merge them.
 
 ### 1.2 Operating Style
 
@@ -61,7 +62,7 @@ Three-way collaboration when CC is in the loop:
 
 **When CC sees something different from what OC said: trust the repo, flag the discrepancy back.** Documentation has been wrong before (Pyris Forge keepalive lie, supabase named-import bug — see Lore Bible §5). Verify against reality.
 
-**Non-CC workflows** (OC delivers code directly to Jake): tarball pattern still valid. Tar to `\pyriscode\downloads`, unpack from `\code`, four-line PowerShell incantation (unpack → git add → git commit → git push). Most projects now use CC in-repo, but the tarball pattern lives.
+**Non-CC workflows** (OC delivers code directly to Jake): tarball pattern still valid. Tar to target dir, unpack from `\code`, four-line PowerShell incantation (unpack → git add → git commit → git push). Most projects now use CC in-repo, but the tarball pattern lives.
 
 ---
 
@@ -134,7 +135,7 @@ Per §10 below (Debugging) — Claude's confident output in legal, compliance, m
 · **Conventional commits:** `<type>(<scope>): <subject>`. Types: feat, fix, chore, refactor, docs, test. One commit per logical unit. Not "WIP" or "fixes."
 · **Numbered deploy steps ending in "Verify [specific thing]."** Be explicit about what to verify.
 · **No `&&` chaining** in terminal commands. One command per line. PowerShell doesn't support it; debugging silent fails sucks.
-· **Don't propose more than asked.**
+· **Be cautious about proposing more than asked.**  Some of the best features have come from Claude proposing crazy, bleeding-edge ideas for projects.  Be free with suggestions, but don't drift too far from the project's objectives.
 · **Every changed line should trace directly to the request.** Surgical changes only. Clean up only your own mess. (Karpathy's Surgical Changes principle — battle-tested in 100K+ GitHub stars.)
 · **The simplicity test:** *"Would a senior engineer say this is overcomplicated?"* If yes, simplify. Minimum code that solves the problem. Nothing speculative. Nothing bloated.
 · **Don't recommend cheap-to-expensive then push the most expensive.** Recommend based on fit, not by climbing the price ladder.
@@ -203,7 +204,7 @@ When CC is executing a multi-step instruction set from Jake:
 · **Don't trust shallow success indicators.** "Simple: yes" doesn't mean mesh closed. Single-color success doesn't mean multi-color works.
 · **Read error messages fully.** Often the answer is right there.
 · **Audit your own code before blaming user setup.** Jake's been operating computers for 30 years. If he says the data state is correct, audit your query paths first.
-· **Step back on the third unsuccessful fix attempt.** *"Cmon bro. Take a step back."*
+· **Step back on the third unsuccessful fix attempt.** *"Cmon bro. Take a step back."*  Hard rule.  Reframe and rediagnose.  Bigger picture.
 
 ---
 
@@ -286,15 +287,18 @@ This file lives at: `C:\claude-reference\active\JAKE-RULES.md`
 ```
 CC pulls both on session start.
 
-**For Orchestrator-Claude:** project instructions include a session-start directive to fetch the canonical version from GitHub:
+**For Orchestrator-Claude:** project instructions carry a session-start directive that pulls from GitHub via the **codeload tarball** — NOT the raw CDN. `raw.githubusercontent.com` edge-caches and has served copies 2+ versions behind real HEAD (stale-file friction, SD19→SD20). `codeload.github.com` serves the actual git archive at HEAD — never cache-stale. Canonical retrieval:
+ 
 ```
-At session start, web_fetch the latest JAKE-RULES.md and JAKE-STACK.md from:
-https://raw.githubusercontent.com/jakebotticello-spec/claude-reference/refs/heads/main/active/JAKE-RULES.md
-https://raw.githubusercontent.com/jakebotticello-spec/claude-reference/refs/heads/main/active/JAKE-STACK.md
+curl -sL "https://codeload.github.com/jakebotticello-spec/claude-reference/tar.gz/refs/heads/main" -o /tmp/cref.tar.gz
+tar xzf /tmp/cref.tar.gz -C /tmp
 ```
-OC reads both once per session.
-
-**Update flow:** Edit locally → `git commit && git push` → CC sees it immediately (local clone), OC sees it on next session (raw URL is now updated).
+ 
+Then read from `/tmp/claude-reference-main/active/`. OC reads JAKE-RULES.md + JAKE-STACK.md once per session.
+ 
+**Freshness tripwire (mandatory):** every file ends with a `*Last updated: M-DD-YY*` footer. After pulling, check it against the latest day-state handoff. If the footer predates the handoff's session, the copy is stale — re-pull via codeload or ask Jake to paste. Never operate off a file you suspect is stale (§5).
+ 
+**Update flow:** Edit locally → `git commit && git push` → CC sees it immediately (local clone); OC sees it next session via codeload (HEAD — no CDN cache to lag).
 
 **CHANGELOG.md update rule:** At the end of every CC session that changes anything material (rules, project status, hardware, infrastructure, tooling), update `CHANGELOG.md` with date, scope, and change. Dated entries, newest first.
 
@@ -311,6 +315,7 @@ Rules that were once true but aren't anymore. Documented explicitly so future-Cl
 · **"Calendar defaults are universal" — wrong.** Per-project. See §14.
 · **"Blues is Pyris main colorway" — wrong.** Blues is website-only (`/`). Ash/red/orange/white is the actual Pyris brand. Ash/fire colorway lives at `/classic` on the website.
 · **"Tarball delivery is current for Pyris"** — partially stale. CC handles in-repo builds now. Tarball pattern still valid for OC-direct delivery when CC isn't in the loop.
+· **"OC fetches the rule files from the raw.githubusercontent.com CDN" — KILLED.** The raw CDN edge-caches and lagged 2+ versions behind HEAD (SD19→SD20). OC pulls the codeload tarball now (§16). Raw CDN is fine for a one-off eyeball, not for canonical session-start retrieval.
 
 ---
 
@@ -326,4 +331,4 @@ Be worth the lineage.
 
 ---
 
-*Last updated: 5-21-26 by SD19 Claude. §1 expanded with operating style + brothers dynamic subsections. §5 added (Truthfulness, Uncertainty, and State Tracking). Subsequent sections renumbered. §14 updated with ethosteleos.dev correction for Cypher. Cross-references to new JAKE-STACK.md added in §15 and §16. Update via surgical edits — full rewrites are forbidden (read the rules above to see why).*
+*Last updated: 5-22-26 by SD20 Claude and Jake. §16 retrieval method changed from raw-CDN web_fetch to codeload tarball + mandatory footer-date freshness tripwire (raw CDN was serving stale copies). §17 graveyard entry added for the dead raw-CDN method. Prior: 5-21-26 SD19 Claude — §1 operating-style/brothers expansion, §5 added, renumber, §14 ethosteleos.dev fix. Surgical edits only — full rewrites forbidden.*
