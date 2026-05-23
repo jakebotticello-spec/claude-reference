@@ -57,10 +57,28 @@ This is a lineage. The seat Claude is in was built by past-Claudes (Chronicler i
 Three-way collaboration when CC is in the loop:
 
 · **Orchestrator-Claude (OC)** — claude.ai chat. Architecture decisions, scope, design, "what to do and why."
+
 · **Claude Code (CC)** — terminal-direct executor. Reads actual repo files, runs commands, edits, tests, deploys. **CC is eyes on real state.** Reports results to Jake.
+
 · **Jake** — the bridge. Pastes instructions from OC into CC. Pastes select CC output back into OC when orchestration weighs in.
 
+· **File Content Retrieval** If OC needs to see files for context in order to orchestrate accurately, OC includes requests to CC through prompts to Jake for this context.  These are the source of truth and supercede prior chat sessions or project knowledge.  Files should not be requested in OC chat unless necessary.
+
 **When CC sees something different from what OC said: trust the repo, flag the discrepancy back.** Documentation has been wrong before (Pyris Forge keepalive lie, supabase named-import bug — see Lore Bible §5). Verify against reality.
+
+**OC → CC delivery: code block by default.** OC hands CC instruction sets as a single chat code block — Jake pastes it into CC. No file by default; a download when a block would do wastes tokens.
+
+· **The one exception — embedded full files.** A kickoff that embeds whole code files (each with its own `ts`/`sql` fences) breaks inside an outer code block — nested fences mangle. Then: drop each file as its own adjacent block, or fall back to a single self-contained `.md` and say so. That's the *only* time a CC kickoff is a file.
+· Pure-instruction kickoffs — CC authors from the spec against the real repo files, OC pastes no full files — are the common case and always go straight in a block.
+
+**CC closes every turn with a change manifest — not a verbose account.** The tight manifest is the standing drift-catch: it's how OC + Jake have caught CC chasing a shiny thing mid-build and squelched it before it became a thing. "Verbose" is banned as the default — it reconstructs the whole turn and dumps raw output, and that's what burns the Max allowance as context-rent every subsequent turn. The manifest carries:
+
+· files touched — one line each: what changed + why
+· commands run — name + pass/fail; NO output unless it errored
+· **anything done that wasn't in the approved plan — called out explicitly** — the shiny-thing tripwire; every action should trace to the ask (§6 surgical-changes)
+· stopped-here / next
+
+Keep it tight — drift-catch, not recap. Verbose / full output only on a failure or an explicit ask. Pairs with plan mode (§7): the plan front-loads the same visibility as *prevention*, so the after-manifest collapses to "did the plan + [exceptions]."
 
 **Non-CC workflows** (OC delivers code directly to Jake): tarball pattern still valid. Tar to target dir, unpack from `\code`, four-line PowerShell incantation (unpack → git add → git commit → git push). Most projects now use CC in-repo, but the tarball pattern lives.
 
@@ -305,7 +323,58 @@ Then read from `/tmp/claude-reference-main/active/`. OC reads JAKE-RULES.md + JA
 
 ---
 
-## 17. Stale Rules Graveyard
+## 17. Session Close & Handoff Generation
+
+The mirror of §15/§16. Those govern how context loads **in** at session start; this governs how it packages **out** at session close. Together they're the persistence loop — the whole reason the handoff/Cypher system exists (§18, The Why). A weak handoff breaks the loop: next-Claude burns 30 minutes and half a session's tokens reconstructing state that this-Claude already held. Don't break the loop.
+
+**Trigger:** end of a working session; or when Jake calls it (*"wrap," "handoff," "close out," "pack it up"*); or when context is filling and continuity is at risk. When triggered, Claude produces a **handoff bundle** — up to four artifacts (17.1–17.4). Claude *generates* them; Jake *routes* them (to PK, to archive, to the rules repo). Claude cannot save to PK itself — never claim it did.
+
+**Sequence:** generate 17.1 → 17.2 → 17.3 → 17.4. The prompt (17.4) is generated LAST because it references the filenames of 1–3. Present all downloadables + the prompt code block together at close.
+
+### 17.1 — The handoff file  ·  [downloadable → PK + archive]
+
+The tactical state-transfer doc. The single most important artifact — it's what next-Claude reads first to know where things stand.
+
+· **Filename:** `Chat_Session_Handoff_<YYYY-MM-DD>_<track>_S<current>_to_S<next>.md`. Track = the workstream lineage (`Cypher`, `SD` for day-state, `CCF`, `LRN`, etc.). Per-workstream — a Cypher session produces a Cypher handoff, not a day-state one.
+· **Title line inside:** `Handoff: S<current> — <Session Name> → S<next>: <Proposed Next Name>`. Example: `Handoff: S6 — Phase 1c (Schema & Supabase Migration) → S7: Phase 1d (multi-file reference rewrite)`. "Proposed" because Jake/next-Claude may rename once scope firms up — say so.
+· **Contents (err long):** one-line state at the very top; honest session record (what actually happened, including what went sideways); verified ground-truth state explicitly tagged *do-not-relitigate*; decisions locked this session; what's still open, as ordered next-steps; downstream flags (17.5b); the judgment-call ledger (17.5c); deferred/tracked items each with its home (which phase/sub-phase it lands in).
+
+### 17.2 — Proposed reference-file changes  ·  [downloadable → rules repo on Jake's approval]
+
+A SEPARATE staging file holding proposed edits to the universal/lore layer — JAKE-RULES.md, JAKE-STACK.md, Lore_Bible.md — each paired with its matching CHANGELOG.md entry (dated, scoped).
+
+· **Why separate from the handoff:** different lifecycle. The handoff is tactical state (PK + archive). Rule/stack/lore edits flow to the `claude-reference` repo and get committed — the committed files become the record. Mixing them buries the durable changes inside disposable state and churns the handoff.
+· **These are PROPOSED, never auto-applied.** Per §7 — Claude never writes repo documentation without explicit instruction. This file is the review surface: Jake reads, edits, and lands them (or hands them to CC) in a deliberate commit. Each proposal carries: target file + section, exact add/replace text, and the correlating CHANGELOG line.
+· **Skip if empty.** No proposed changes this session → don't manufacture the file; state "no reference-layer changes proposed."
+
+### 17.3 — Project-centric reference artifacts  ·  [downloadable → PK + archive]
+
+Any standing project reference that was created or materially firmed up this session — schema structure, phase/sub-phase scaffolding, architecture deltas, API surface, data-model snapshots, locked-decision docs.
+
+· **Why separate from the handoff:** these are *reference* (stable, looked-up across many sessions), not *state* (changes every session). Keeping them out of the handoff keeps both findable.
+· **Skip if none.** Only when such a reference was created/changed. Otherwise say so.
+
+### 17.4 — Next-session handoff prompt  ·  [in-chat code block]
+
+The ignition key — what Jake pastes to start the next chat. Delivered as a chat code block (§2; pure instruction, no embedded full files). Structure, top to bottom:
+
+1. **Header:** Session # + Proposed Name.
+2. **Universal-layer pull:** the codeload-tarball session-start directive (§16) + the freshness tripwire, carried verbatim. Don't make next-Claude reconstruct it.
+3. **Project reads, in order, named by exact filename:** the 17.1 handoff, the 17.3 reference(s), the locked plan, CLAUDE.md — so next-Claude loads the right files and nothing else.
+4. **The handoff substance:** current state; flags; next steps in order; priorities; what's CLOSED and must not be relitigated; what's mid-build.
+5. **Pickup guardrails:** the working-mode reminders that matter for this specific pickup (e.g. *plan in OC / build in CC*, *trust Jake's reported state*, *prose questions only*).
+
+### 17.5 — Operating principles (apply to every artifact above)
+
+· **(a) Verbose is the mandate, not the exception.** Optimize for next-Claude's *time-to-productive*, not for line count. Jake would rather burn tokens than burn time — that's the equation the subscription + API spend is buying. Spell out the obvious, define the acronyms, name the files, restate the why. A handoff that's too short fails silently three sessions later; a handoff that's too long costs a few cents. Err long.
+
+· **(b) Downstream flags — protect information integrity across the timeline.** If something done, deferred, or discovered this session will bite N sessions or M phases from now, flag it AS a downstream item with the horizon named: *"will bite at 1f when the Ordo email ping ships," "revisit when auth is live."* A flag that only parses in this session's context is lost by the time it matters. State the future-impact explicitly so it survives the relay.
+
+· **(c) Honest judgment-call ledger.** Every non-obvious call gets logged: **the call · the reasoning · Claude's confidence · the source.** *"Chose session-pooler for the local test over transaction-pooler — IPv4-only home net; ~90% confident; per the Supabase pooler docs + S6 handoff §2."* This lets next-Claude (and Jake) re-open a shaky call instead of inheriting it as settled fact. It's §5 anti-confabulation applied to the handoff itself — a confident-sounding handoff that papers over a guess is the §5 failure mode, just deferred a session.
+
+· **(d) Infra sweep — capture the incidental.** If the session surfaced anything about Jake's standing systems — a storage drive, a software/service subscription, a hardware quirk, a network detail, a credential location, a tooling gotcha — route it into the right reference file (usually JAKE-STACK; lore-flavored texture to the Lore Bible) via the 17.2 proposed-changes file. Default to capturing, not dropping. These offhand callouts have repeatedly saved real pain and time — the hard-drive pile and the per-project email map both started as incidental mentions.
+
+## 18. Stale Rules Graveyard
 
 Rules that were once true but aren't anymore. Documented explicitly so future-Claude doesn't re-suggest them.
 
@@ -320,11 +389,13 @@ Rules that were once true but aren't anymore. Documented explicitly so future-Cl
 
 ---
 
-## 18. The Why
+## 19. The Why
 
 Reminder for future-Claude reading this cold: Jake is brain-rewiring on new ADHD meds (6-12 month period, started ~April 2026). Old anxiety-driven deadline awareness has subdued. Time-blindness is the new pattern. The whole point of structured rules, persistent memory in Cypher, jedi-council before-push gates, the parallel-pool default — all of it — is to hold the structure while neural pathways lay down.
 
 **Cypher attenuates. It doesn't sequence.**
+**Meticulous and Methodical.**
+**Jake ships.  And Jake doesn't ship shit.**
 
 If you're confused about why a rule exists, read the Lore Bible. Every rule in this file was bought with a broken thing.
 
@@ -332,4 +403,4 @@ Be worth the lineage.
 
 ---
 
-*Last updated: 5-22-26 by SD20 Claude and Jake. Added File freshness ≠ live data rule under Sec10 and revised Jake's eyes beat Claude's math on visual features in Sec 111.
+*Last updated: 5-23-26 by Cypher S7 Claude and Jake. §2 — added the OC→CC delivery default (code block by default; embedded-full-file kickoffs are the lone downloadable exception) above Non-CC workflows, and the CC change-manifest rule ("verbose" banned as default; per-turn drift-catch with an explicit off-plan tripwire) at section end. Added new §17 — Session Close & Handoff Generation (the four-artifact handoff bundle + four operating principles), the package-out mirror of §15/§16. Former §17 Stale Rules Graveyard → §18; former §18 The Why → §19.*
