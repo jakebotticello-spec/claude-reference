@@ -60,11 +60,12 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · **IP:** `192.168.50.88` (DHCP-reserved, MAC `BC:24:11:07:69:EF`)
 · **SSH alias on Workhorse:** `nightswatch` (1PW agent)
 · **Display name in Proxmox UI:** still `bambu-monitor` — cosmetic rename queued.
-· **systemd unit:** `/etc/systemd/system/neighborhood-watch.service` v2. `NoNewPrivileges` dropped (broke ping via cap_net_raw strip in v1); other hardening preserved (`PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, `ReadWritePaths` carve-out). `Restart=on-failure`, `RestartSec=5s`, `enable`d at boot.
+· **systemd unit:** `/etc/systemd/system/neighborhood-watch.service` v2. `NoNewPrivileges` dropped (broke ping via cap_net_raw strip in v1); other hardening preserved (`PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, `ReadWritePaths` carve-out). `Restart=on-failure`, `RestartSec=5s`, `enable`d at boot. **KNOWN: ffmpeg ignores SIGTERM**, so a plain `systemctl restart` makes systemd wait the full stop-timeout (**>90s observed, twice**) before SIGKILL. **QUEUED FIX (not yet applied as of SD20b):** add `KillMode=mixed` + `TimeoutStopSec=10`, then `daemon-reload`. Interim fast restart: `sudo pkill -9 ffmpeg && sudo systemctl restart neighborhood-watch` (~3s).
 · **VM specs:** 2 cores type=host, 4 GiB RAM, 20 GB virtio-scsi on local-lvm (iothread + discard + ssd emulation), i440fx + SeaBIOS. CD-ROM device still emulated (empty) — causes `ata_sff_pio_task` log noise; full removal needs VM bounce.
-· **Code:** `/home/jake/neighborhood-watch/` — `server.js` v3.1, `life360.js` v1.2, `status.js` v2.4, `status.html` v2.2, `config.json`, `l360_token_test.js`
+· **Code:** `/home/jake/neighborhood-watch/` — `server.js` v3.2, `life360.js` v1.2, `status.js` v2.4, `status.html` v2.2, `index.html` (player reworked SD20a), `config.json`, `l360_token_test.js`. **v3.2 (SD20a):** dropped the dead SD/720p tablet encode and widened HD `hls_list_size` 4→10; `index.html` got loosened hls.js live-edge config + non-fatal stall watchdog (seek-to-live) + 5s drift backstop. `.bak` rollbacks of both on the VM.
 · **Standing risk:** `config.json` holds plaintext secrets (Bambu camera creds, Life360 token). 1PW Environment migration queued.
-· **Floor metrics:** CPU ~102% of 2 cores (ffmpeg HLS transcoding — normal). RAM ~157 MB. Disk 36.1% of 9.75 GB.
+· **Standing risk — ffmpeg "frozen-but-flowing" cam failure (SD20b):** the Tapo RTSP pull can wedge mid-stream while the TCP connection stays up — ffmpeg keeps muxing the LAST frame forever, writing fresh `.ts` *files* full of a frozen *frame*, faster than realtime, with ZERO log errors. **Signature:** consecutive segments **byte-identical in size** + write cadence faster than ~1s. File-based checks (`find -newermt`, mtimes, segment count) all report green. **Recurs after a clean restart** (points upstream at the Tapo, not ffmpeg). **Reconnect/timeout ffmpeg flags do NOT catch this** — no dropped connection, bytes still flow. **Planned fix:** content-freshness watchdog (restart ffmpeg if last N segments byte-identical for ~60s) + cam-tile liveness indicator (`server.js` freshness field → `index.html` "last live frame: Xs ago"). Camera = Tapo C111 `.199`, independently powered (power-cycle is clean — doesn't touch the printer).
+· **Floor metrics:** CPU ~102% of 2 cores (ffmpeg HLS transcoding — normal). RAM ~157 MB. Disk 36.1% of 9.75 GB. *(CPU figure predates the v3.2 single-HD-encode change — likely lower now; re-measure.)*· **Floor metrics:** CPU ~102% of 2 cores (ffmpeg HLS transcoding — normal). RAM ~157 MB. Disk 36.1% of 9.75 GB.
 
 ### VM 200 — Watchtower
 · **Role:** Life360 bot account host. Android-x86 9.0.
@@ -74,7 +75,7 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · `http://192.168.50.88:8765/status` — tiles: NAS · Last Backup · Router · Internet · Replicator (P1S) · Family (Life360)
 
 ### Kiosk service
-· Castle Black now runs a status-kiosk.service (cage+cog→:8765/status) on tty1, driving the Acer. New standing infra.
+· Castle Black now runs a status-kiosk.service (cage+cog→:8765/status) on tty1, driving the Acer.
 · The two scars, for the lineage: WLR_DRM_DEVICES is colon-separated so PCI by-path names blow up — use card1 (+ a udev alias later if you want renumber-safety); and a kiosk service needs Conflicts=getty@tty1 or it can't wrestle DRM master off the console. Both cost us a cycle; both worth a Lore Bible line so the next Claude doesn't re-buy them.
 
 ---
@@ -175,4 +176,4 @@ Jim's side has no split — `jim@ethosteleos.dev` for everything Ordo-related.
 
 ---
 
-*Last updated: 5-22-26 by Jake. Revised home hardware stack (added monitor info), corrected printer hardware. Initial creation alongside JAKE-RULES.md expansion. Surgical edits only going forward.*
+*Last updated: 5-22-26 by Jake. SD20b: corrected TheNightsWatch code versions (server.js v3.2 + index.html), logged the ffmpeg SIGTERM slow-kill + frozen-but-flowing failure mode. Surgical edits only going forward.*

@@ -11,6 +11,80 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-22 — SD20b (Afternoon/evening: LRN filing window verified + cam frozen-but-flowing diagnosed)
+
+**Scope:** JAKE-RULES §10/§11, JAKE-STACK §3 (TheNightsWatch), Lore Bible, litigation status (LRN).
+
+**Change(s):**
+- **JAKE-RULES §10** — added "File freshness ≠ live data."
+- **JAKE-RULES §11** — extended "Jake's eyes beat Claude's math" with the ground-truth / don't-relitigate reinforcement.
+- **JAKE-STACK §3 (VM 100)** — corrected stale `server.js` v3.1→v3.2 + added `index.html` (SD20a rework was unlogged); documented the ffmpeg SIGTERM slow-kill hang (>90s) + queued `KillMode=mixed`/`TimeoutStopSec=10`; added the frozen-but-flowing standing risk + planned content-freshness watchdog.
+- **Lore Bible** — added "File Freshness Was a Lie" (§5 Hardware & Build).
+- **LRN filing window verified:** Reno Justice Court, Washoe County NV via eFileNV (Tyler Odyssey), 24/7 submission; filing type CC25O ($2,500.01–$5,000.00); original returned 4/24 "Rejected" (generic reason); RJC civil requires Summons + civil cover sheet for a new case; Memorial Day Mon 5/25 closes court — clerk review resumes Tue 5/26. v3a packet NOT yet reviewed.
+
+**Why:** Cam feed froze (frozen-but-flowing ffmpeg). First ~40 min went to a misdiagnosis built on file-freshness checks that measure file mtime, not video content — that lesson is now a rule. LRN window was the SD20b top-Mandatory groundwork; packet review deferred (cam ate the session).
+
+**Project status snapshot (as of 5-22-26):**
+- **Active:** Pyris Consulting, CCF Recruiting, Cypher (LIVE on public internet; 3 infra phases + S1b schema/migrations to usable)
+- **Active litigation:** LRN (v3a — filing window verified; needs packet review [complaint + summons + civil cover sheet] before refile)
+- **Hardware:** Castle Black panic = thermal, confirmed stable; cam feed frozen-but-flowing (specimen held for AM diagnosis); HUSBZB-1 in hand (Phase 8 gated, NOT by PSU); Bills sign nearly glued (LEDs next)
+- **Joint partnership:** Polarity (with Jim Donio)
+- **Completed:** GloTwp (Steve Acito owes marketing in trade)
+
+---
+---
+
+## 2026-05-22 — Cypher S2–S5 (Re-root correction + Railway deploy bring-up + 1a CLOSED)
+
+**Scope:** Cypher repo root structure, Railway deploy config, `code/package.json` dependency layout. Correction of false-state claims logged in S2. Phase 1a deployment.
+
+**Change(s):**
+
+- **1a CLOSED — multi-tenant foundation is live (S5).** All three subdomains route correctly over live Let's Encrypt certs, deploy Active, SPA renders ("Cypher / Phase 1a — Foundation"):
+  - `cypher.ethosteleos.dev` → 200, `cypher_tenant` / `tenant`
+  - `ordo.ethosteleos.dev` → 200, `ordo_tenant` / `tenant`
+  - `jango.ethosteleos.dev` → 200, `ordo_tenant` / `landlord`
+  - Host-header middleware resolves `(tenant, view)` correctly for all three, including jango → ordo_tenant/landlord. (Note: jango's *hard 403* for non-landlords is not yet exercised — `/healthz` is unauthed; the role-gated rejection lands with auth in 1b.)
+- **The build break, fixed (S5):** moved `vite` + `@vitejs/plugin-react` from `devDependencies` to `dependencies` in `code/package.json`. Root cause: S4's `NODE_ENV=production` service variable makes `npm ci` skip devDependencies → `vite` not installed → `vite build` exits 127 (`sh: 1: vite: not found`). Confirmed deterministic via two full build logs ~4h apart (12:36 + 16:24), identical failure both times. `@types/*` and `typescript` correctly stayed devDeps (esbuild strips types at build; `tsc` only runs in the `typecheck` script). Commit: `fix(build): move vite + plugin-react to dependencies so prod npm ci installs them`.
+- **Re-root LANDED (S4).** Repo restructured to `code/` + `docs/` subdirs at root; committed node_modules purged from the tree; Railway Root Directory set to `/code`. Verified three ways: force-push moved 28 objects / 55 KiB (vs. the 21 MiB node_modules-laden fetch), GitHub tree correct, build got past the mis-root death. HEAD `b599ac3`. This killed the 10+ hour `Failed to read app source directory` failure.
+- **Deploy config corrected (S4).** `NODE_ENV=production` set (was unset → app ran the dev branch in a prod container, bound :8080). Explicit `PORT=3000` service variable set and all four Railway domains aligned to port 3000 (were split 8080/3000 across routes). `railway.json healthcheckPath` confirmed it MUST stay `/` — `/healthz` is host-gated and would 404 Railway's probe.
+- **§4 loose end CLOSED:** `git push -u origin main` set the upstream tracking ref for `main` (re-init had wiped it).
+
+**Corrections to prior record:**
+
+- **S2 logged false state.** S2 claimed the deploy had succeeded and certs/docs were good; none of it held (re-root hadn't landed, certs were hostname-mismatched, build was dead at the mis-root). Corrected here per the standing anti-confabulation rule — an uncorrected changelog is itself a confabulation source (JAKE-RULES §5).
+
+**Learnings logged:**
+
+- **`NODE_ENV=production` touches `npm ci`, not just runtime.** Prod env drops devDependencies at install time. Any build tooling that must run during a prod build belongs in `dependencies`, not `devDependencies`. This was the link that broke S4's "config changes don't alter the build" reasoning and cost the back half of S4 plus the open of S5.
+- **Build-path rule (refined S5).** Code reaches the repo one of two ways: CC writes it in-repo, or OC delivers a single self-contained file (download or tarball). OC never hands Jake multi-file edits or folder-structure to assemble by hand. Single-file download is fine — the line is multiple files / building structure.
+- **Ground-truth-before-theory paid off (reinforces §5 / §7).** S5 opened leaning "Railway build-infra, nothing to fix" off S4's truncated log. The full streamed log killed that lean on the first read — deterministic exit 127 at `vite build` across two attempts. Refresh-first + pull-the-real-log did exactly what the rule promises.
+
+**Why:** S4 closed RED at a ~9s image-build failure with the cause unconfirmed, leaning Railway infra; the deploy had been blocked 10+ hours across the re-root saga. S5 pulled the full build log, found the one-line dep-location bug (vite as a devDep under prod install), fixed it, and closed 1a — green build, `Cypher listening on :3000 [production]`, Active, three subdomains verified, SPA rendering.
+
+**Cypher 1b prerequisite flagged (not yet done):** Railway Variables holds only `NODE_ENV` + `PORT` — no secrets. Before 1b's DB-backed tenant lookup ships, the 1PW `Cypher: Dev` secrets (Supabase URL/anon/service_role, both Anthropic keys, `OAUTH_ENC_KEY`) must reach Railway or prod crashes on boot the same way it did today, different missing piece. `OAUTH_ENC_KEY` not yet generated (CC generates it during 1c scaffolding).
+
+**Project status snapshot (as of 5-22-26):**
+- **Active:** Pyris Consulting, CCF Recruiting, **Cypher (Phase 1a CLOSED — 1b next)**
+- **Active litigation:** LRN (complaint v3a ready to file)
+- **Joint partnership:** Polarity (with Jim Donio)
+- **Completed:** GloTwp (Steve Acito owes marketing in trade)
+- **Dead:** RecruitMail (slated for rename + integration into CCF)
+
+---
+
+## 2026-05-22 — SD20 (Universal-layer file maintenance)
+
+**Scope:** `claude-reference/active/JAKE-RULES.md` (§16, §17), `claude-reference/active/JAKE-STACK.md` (§1, §7).
+
+**Change(s):**
+
+- **JAKE-RULES §16 — session-start retrieval method changed.** Orchestrator-Claude now pulls the rule files via the codeload tarball (`codeload.github.com/.../tar.gz/refs/heads/main`) instead of `web_fetch` against the raw.githubusercontent.com CDN. Added a **mandatory footer-date freshness tripwire**: after pulling, compare each file's `Last updated:` footer against the latest day-state handoff; if older, re-pull or stop, never operate off a suspected-stale file (§5).
+- **JAKE-RULES §17 — graveyard entry added** for the dead raw-CDN retrieval method, so future-Claude doesn't re-suggest it.
+- **JAKE-STACK §1 (Workhorse) — monitor info added.** Three-monitor station documented: 48" Decogear ultrawide, 29" LG, 27" HP.
+- **JAKE-STACK §7 (3D print stack) — printer hardware corrected.** Heater block now reflects the OEM Bambu Hotend assembly (supersedes the off-brand interchangeable-nozzle block carried in prior context — the OEM-first-for-critical-tolerance lesson from the Hotend Saga).
+
+**Why:** Universal-layer hygiene. The retrieval-method fix removes a recurring stale-file friction at session start — the raw CDN edge-caches and had served copies 2+ versions behind real HEAD (cost time SD19→SD20); codeload serves the git archive at HEAD, never cache-stale. The JAKE-STACK corrections bring standing infrastructure in line with reality.
 
 ---
 
