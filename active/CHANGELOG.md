@@ -11,6 +11,21 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-24 — SD23 (Castle Black fan install + panic-conclusion reconciliation)
+
+**Scope:** JAKE-STACK §2 (OS — CPB persistence line; Standing risks — panic line); plus the Castle Black hardware-state changes and the open-loops §4C sharpening logged below.
+
+**Change(s):**
+- **JAKE-STACK §2 (Standing risks)** — replaced the stale "RAM intermittent fault remains the top open suspect" line with the thermal/CPB working conclusion. Mechanism: CPB transient spikes off a high baseline; CPB-disable made it stable. SD23 fan install dropped idle baseline ~10°C; CPB came back ON this boot (persistence broke) and was deliberately LEFT ON as a live retest (CPB-on + cooled = hypothesized-safe). Stays up → thermal headroom confirmed, loop closes; hangs again CPB-on-cooled → power-transient lane → S15 PSU swap is next lever, NOT RAM. RAM demoted to optional MemTest confound-killer — never positively evidenced (no MCE logs).
+- **JAKE-STACK §2 (OS)** — updated the CPB line: persistence BROKEN as of SD23 (`boost`=1 after cold boot; `/etc/rc.local` fragile on Proxmox 9/systemd, systemd unit is the durable fix). Currently left ON deliberately; durable-disable on hold until retest concludes.
+- **Castle Black hardware (state, reflected in §2):** fan install done — 80mm (4-pin PWM) on sys-fan header front-intake; 60mm (2-pin) on SATA→Molex 12V rear-exhaust. Board 4MP19ME, M75s Gen 2 SFF, 4650G APU (no dGPU). NVMe idle 24.9°C (~10°C better than the external 125mm vortex it replaced — directed path beat brute-force CFM). 80mm on silicone dampener mounts; 60mm zip-tied to rear expansion rail. Box reassembled.
+- **Thermistor** re-homed during install (80mm took its old mount) → standing suspect #1 for any future Castle Black thermal weirdness / fan-curve oddness / panic. Check probe placement first. (Correction logged: this chassis probe likely feeds a secondary/chassis curve, not the main blower curve which keys off CPU Tdie — placement guidance unchanged.)
+- **Storage "didn't find a local pool" boot message** = benign boot-order race (LVM-thin activation + ZFS-no-pools skip + dashboard/kiosk race during the cold-boot window). Ground-truth confirmed via `pvesm status` / `qm status` / `journalctl`. Closed, not a fan-work scar.
+- **Open-loops §4C sharpened:** the silent, no-error, every-switch re-read tax across ~6 parallel Claude windows is the canonical pain case — promotes colored frames-on-windows (not painted cells) to primary justified feature, decoupled from the conveyor (~½ session AHK, standalone). Terminal per-context tints = separate zero-code freebie.
+
+**Why:** The old §2 RAM line contradicted this CHANGELOG's own 5/22 (SD20b) "panic = thermal, confirmed stable" entry and got parroted across SD23 before Jake forced a re-derivation — a §5 failure laundered through a stale doc under a fresh footer (invisible to the freshness tripwire). Reconciling §2 in the live file stops next-Claude re-inheriting it at startup step 1, before the handoff (step 3) ever corrects it.
+
+
 ## 2026-05-24 — Cypher S10 (soul-as-substrate: frame-promotion + genesis canonization + voice layer)
 
 **Scope:** JAKE-RULES §1.2 + §15; Cypher docs — `Cypher_Architecture_Discussion_2026-05-11.md` (canonized), new `Cypher_Voice_and_Presence.md`, `CLAUDE.md` §2.5/§10.

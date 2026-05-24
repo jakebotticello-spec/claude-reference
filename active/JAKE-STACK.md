@@ -44,8 +44,7 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · CPB (Core Performance Boost) disabled at runtime via `/sys/devices/system/cpu/cpufreq/boost` — eliminates transient thermal spikes. Persistent via `/etc/rc.local` (or systemd unit).
 
 ### Standing risks
-· **Intermittent panics under investigation** — two unexplained hard hangs 5/21 AM (01:42 + ~08:25). NVMe ruled out. CPB-disable removed transient thermal spikes as a vector. RAM intermittent fault remains the top open suspect — MemTest86+ queued (overnight test).
-· **PSU concern from S15** — two reboots under sustained ISO upload write load. Parked, not resolved. Spare 700/750W ATX on hand for swap-test (requires Lenovo→ATX adapter cable + 3D-printed bumpout).
+· **Castle Black panics = thermal/CPB, working conclusion (5/22, holding).** Two hard hangs 5/21 AM (01:42 + ~08:25). NVMe ruled out. Mechanism: CPB transient spikes off a high baseline. **CPB-disable made it stable; SD23 fan install dropped the baseline ~10°C and CPB came back ON this boot — now running as a live test (CPB-on + cooled = the hypothesized-safe condition).** Uptime over coming days decides it: stays up → thermal headroom confirmed, loop closes. Hangs again CPB-on-cooled → power-transient lane → PSU swap (see below), NOT RAM. RAM was never positively evidenced (no MCE logs) — demoted from "top suspect" to optional overnight MemTest confound-killer.
 · **Bambu cloud MQTT auth token** has a ~3-month silent expiration clock — no creation date logged historically.
 
 ---
