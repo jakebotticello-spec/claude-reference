@@ -11,6 +11,15 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-24 — SD24 (Castle Black VM 100 monitor recovery + liveness-gap)
+
+**Scope:** JAKE-STACK §3 (VM 100 — TheNightsWatch standing risks).
+
+**Change(s):**
+- **JAKE-STACK §3 (VM 100)** — added standing risk: `server.js`'s Node/V8 worker can *hang* (not crash) — `soft lockup CPU#0 [V8Worker:NNN]` — while the VM still reports "up" and the dashboard goes dark silently. systemd `Restart=on-failure` fires only on a crash, not a hang, so `neighborhood-watch.service` never restarts it. Recovery: `qm stop 100 && qm start 100`. Fix queued: external liveness probe (HTTP heartbeat → restart on stall). Same liveness gap previously flagged for the camera, now on the Node layer.
+
+**Why:** Hit live at SD24 — VM 100 soft-locked on a hung V8 worker; host stayed healthy (load ~2.0, SSH fine); recovered via `qm` bounce. Logging the standing risk + the queued liveness-probe fix so the silent-dark-dashboard failure isn't re-diagnosed from scratch next time.
+
 ## 2026-05-24 — SD23 (Castle Black fan install + panic-conclusion reconciliation)
 
 **Scope:** JAKE-STACK §2 (OS — CPB persistence line; Standing risks — panic line); plus the Castle Black hardware-state changes and the open-loops §4C sharpening logged below.
