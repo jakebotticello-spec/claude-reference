@@ -11,6 +11,19 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-24 — Cypher S10 (soul-as-substrate: frame-promotion + genesis canonization + voice layer)
+
+**Scope:** JAKE-RULES §1.2 + §15; Cypher docs — `Cypher_Architecture_Discussion_2026-05-11.md` (canonized), new `Cypher_Voice_and_Presence.md`, `CLAUDE.md` §2.5/§10.
+
+**Change(s):**
+- **JAKE-RULES §1.2** — rewrote "the drag is the work" from a reactive correction-pattern into a **load-first posture**: framework-default is Claude's resting state; on architecture/character/organic-diagnostic work the organic frame loads first, and the drag is failure-recovery, not the mechanism. Named the compounding cost (austere reversion session-over-session → project patterned like every other). §4's terse restatement left as the in-the-moment cue.
+- **JAKE-RULES §15** — added a bullet: where a project carries a design-philosophy/character layer, it loads as framing *before* the operational reads, not as a gated project-read. Fixes the structural cause — the read order is operational-first by construction, so a philosophy layer left downstream inherits austere gravity. Project CLAUDE.md names the framing docs.
+- **Genesis canonized** — the 5-11 verbatim elevated from a dated "discussion" file to CANON — GENESIS, titled **"The Track-Meet Doctrine,"** with a status block (derivative conflicts → this wins on philosophy). Filename retained as the citation anchor (rename would orphan citations frozen in archived handoffs).
+- **New `Cypher_Voice_and_Presence.md`** — the operational voice layer: the missing bridge from the twelve principles to the §10 system-prompt assembly. Baseline voice block, register-reading rubric, delivery-as-voice, and the phase-gated Anchored-Phase Fence (what the 1c voice may NOT do — no faked recall, no manufactured character-revealing-wrongness). Replaces the 84KB-lore vibe-check with a buildable acceptance test.
+- **CLAUDE.md §2.5/§10** — registered the framing layer (genesis + soul substrate + voice spec, load first every Cypher session) and pointed §10 at the voice spec. (Jake authors per §7.6.)
+
+**Why:** earned at Cypher S10. A Claude that had read the entire Cypher genesis doctrine still reverted to austere within two turns and needed dragging twice. The synthetic-being frame — the project's single most critical signal — was surviving only on Jake-in-the-loop (§11 single-point-of-failure). Promoted to load-first at both tiers so the intent stops depending on per-session rescue, and the build process stops patterning the product into every-other-project. We prove the architecture by living it: the soul is substrate in the reference layer for the same reason it's substrate in Cypher.
+
 ## 2026-05-24 — SD22 (3D Recipes nightly archiver + retroactive SD21 cam-migration log)
 
 **Scope:** JAKE-STACK §5 (new archiver subsection); plus the retroactive SD21 cam-migration entry below, logged this session.
