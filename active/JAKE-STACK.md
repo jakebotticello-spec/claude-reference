@@ -55,17 +55,24 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 ### VM 100 — TheNightsWatch
 **Canonical lore name.** Hostname inside VM is still `neighborhood-watch`; multi-surface rename queued.
 
-· **Role:** Dashboard server. Bambu camera HLS proxy. Status tiles. Life360 polling. Heartbeat receiver.
+· **Role:** Dashboard server. Status tiles. Life360 polling. Heartbeat receiver. Printer MQTT/WS. (Camera is served by a co-located `go2rtc` WebRTC gateway — see below; it is no longer proxied through this server.)
 · **OS:** Ubuntu 24.04.4 LTS Server, Node v24.15 at `/usr/bin/node`
 · **IP:** `192.168.50.88` (DHCP-reserved, MAC `BC:24:11:07:69:EF`)
 · **SSH alias on Workhorse:** `nightswatch` (1PW agent)
 · **Display name in Proxmox UI:** still `bambu-monitor` — cosmetic rename queued.
-· **systemd unit:** `/etc/systemd/system/neighborhood-watch.service` v2. `NoNewPrivileges` dropped (broke ping via cap_net_raw strip in v1); other hardening preserved (`PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, `ReadWritePaths` carve-out). `Restart=on-failure`, `RestartSec=5s`, `enable`d at boot. **KNOWN: ffmpeg ignores SIGTERM**, so a plain `systemctl restart` makes systemd wait the full stop-timeout (**>90s observed, twice**) before SIGKILL. **QUEUED FIX (not yet applied as of SD20b):** add `KillMode=mixed` + `TimeoutStopSec=10`, then `daemon-reload`. Interim fast restart: `sudo pkill -9 ffmpeg && sudo systemctl restart neighborhood-watch` (~3s).
+· **systemd unit:** `/etc/systemd/system/neighborhood-watch.service` v2. `NoNewPrivileges` dropped (broke ping via cap_net_raw strip in v1); other hardening preserved (`PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, `ReadWritePaths` carve-out). `Restart=on-failure`, `RestartSec=5s`, `enable`d at boot.
 · **VM specs:** 2 cores type=host, 4 GiB RAM, 20 GB virtio-scsi on local-lvm (iothread + discard + ssd emulation), i440fx + SeaBIOS. CD-ROM device still emulated (empty) — causes `ata_sff_pio_task` log noise; full removal needs VM bounce.
-· **Code:** `/home/jake/neighborhood-watch/` — `server.js` v3.2, `life360.js` v1.2, `status.js` v2.4, `status.html` v2.2, `index.html` (player reworked SD20a), `config.json`, `l360_token_test.js`. **v3.2 (SD20a):** dropped the dead SD/720p tablet encode and widened HD `hls_list_size` 4→10; `index.html` got loosened hls.js live-edge config + non-fatal stall watchdog (seek-to-live) + 5s drift backstop. `.bak` rollbacks of both on the VM.
+· **Code:** `/home/jake/neighborhood-watch/` — `server.js` v3.3, `life360.js` v1.2, `status.js` v2.4, `status.html` v2.2, `index.html` (cam tile reworked SD21), `config.json`, `l360_token_test.js`. **v3.3 (SD21):** the ffmpeg→HLS camera pull was **removed** — `server.js` now serves the dashboard, printer MQTT/WS, `/api/config`, `/api/printer`, and the kiosk routers only. The camera is served by `go2rtc` (see below). `index.html` cam tile rewritten to consume go2rtc WebRTC (raw `RTCPeerConnection` signaling). `.bak.sd21` rollbacks of both on the VM.
 · **Standing risk:** `config.json` holds plaintext secrets (Bambu camera creds, Life360 token). 1PW Environment migration queued.
-· **Standing risk — ffmpeg "frozen-but-flowing" cam failure (SD20b):** the Tapo RTSP pull can wedge mid-stream while the TCP connection stays up — ffmpeg keeps muxing the LAST frame forever, writing fresh `.ts` *files* full of a frozen *frame*, faster than realtime, with ZERO log errors. **Signature:** consecutive segments **byte-identical in size** + write cadence faster than ~1s. File-based checks (`find -newermt`, mtimes, segment count) all report green. **Recurs after a clean restart** (points upstream at the Tapo, not ffmpeg). **Reconnect/timeout ffmpeg flags do NOT catch this** — no dropped connection, bytes still flow. **Planned fix:** content-freshness watchdog (restart ffmpeg if last N segments byte-identical for ~60s) + cam-tile liveness indicator (`server.js` freshness field → `index.html` "last live frame: Xs ago"). Camera = Tapo C111 `.199`, independently powered (power-cycle is clean — doesn't touch the printer).
-· **Floor metrics:** CPU ~102% of 2 cores (ffmpeg HLS transcoding — normal). RAM ~157 MB. Disk 36.1% of 9.75 GB. *(CPU figure predates the v3.2 single-HD-encode change — likely lower now; re-measure.)*· **Floor metrics:** CPU ~102% of 2 cores (ffmpeg HLS transcoding — normal). RAM ~157 MB. Disk 36.1% of 9.75 GB.
+· **Historical risk — the ffmpeg "frozen-but-flowing" cam failure (SD20b; pipeline retired SD21).** The old ffmpeg RTSP→HLS pull could wedge mid-stream with the TCP connection still up — ffmpeg muxing the last frame forever, writing fresh `.ts` *files* full of a frozen *frame*, faster than realtime, with ZERO log errors. That pipeline is **gone** as of the go2rtc migration. **It is UNPROVEN whether go2rtc is immune to the same Tapo-side wedge** — if the cam freezes under go2rtc, the content-freshness watchdog idea returns. Detector signature, kept for that day: consecutive segments **byte-identical in size** + write cadence faster than ~1s, with all file-based checks (`find -newermt`, mtimes, segment count) reporting green because they measure the file, not the frame.
+
+### go2rtc — camera WebRTC gateway (on VM 100, SD21)
+· **Binary:** `/usr/local/bin/go2rtc` (v1.9.14, linux-amd64).
+· **Config:** `/home/jake/go2rtc/go2rtc.yaml` — stream `printer` ← Tapo RTSP; `api.origin: "*"` (cross-origin from the `:8765` dashboard); `webrtc.candidates: [192.168.50.88:8555]`. RTSP password injected via `${CAMERA_PASS}` from `/home/jake/go2rtc/go2rtc.env` (`0600`, jake) — **NOT** in the yaml.
+· **Service:** systemd `go2rtc.service` (`User=jake`, enabled at boot, `Restart=on-failure`).
+· **Ports:** Web UI `:1984`, WebRTC media `:8555`.
+· **Footprint:** ~20 MB RAM idle, near-zero CPU (passthrough, no transcode — far lighter than the old ffmpeg HLS transcode).
+· **go2rtc is now the SOLE steady consumer of the Tapo** — see the §7 ~2-pull RTSP ceiling constraint.
 
 ### VM 200 — Watchtower
 · **Role:** Life360 bot account host. Android-x86 9.0.
@@ -87,6 +94,7 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
   · Castle Black `.250` — MAC `88:AE:DD:15:CA:D2`, label `CastleBlack`
   · TheNightsWatch `.88` — MAC `BC:24:11:07:69:EF`, label `TheBlackWatch` (typo, cleanup queued — should be `TheNightsWatch`)
   · NAS `.248` — pre-existing, label `NASBackup`
+  · Workhorse `.238` — surfaced SD21 via a go2rtc consumer `remote_addr`; confirm/reserve if not already.
 · **DNS:** Cloudflare 1.1.1.1 / 1.0.0.1
 · **Naming gotchas:** Proxmox VMs show up in ASUS DHCP client list as "MSFT 5 0" (Proxmox's DHCPv6 client identifier includes that string — Microsoft heritage prank). Set hostnames manually in the reservation form.
 
@@ -109,6 +117,21 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · **Scheduled task:** `WorkhorseNightlyNASBackup`, `/sc daily /st 02:00 /it /f` — daily 2 AM, interactive-mode (no password since Workhorse is 24/7 with Jake logged in)
 · **Heartbeat:** POSTs to `http://192.168.50.88:8765/api/backup/heartbeat` with reason field — surfaces on dashboard Last Backup tile
 · **D: zero files in /MIR mode = legitimate "synchronized" state**, NOT failure. Earlier-session Claude misdiagnosed this once.
+
+### 3D Recipes Nightly Archiver
+
+Keeps `C:\3D Recipes` lean by sweeping cold model folders to D: while leaving the C: paths fully usable.
+
+· **Script:** `C:\3D-Archive\Archive-3DRecipes.ps1` (v1.0, SD22). Logs in `C:\3D-Archive\logs\`. Portable — `$PSScriptRoot`-relative.
+· **What it does:** nightly, any top-level folder in `C:\3D Recipes` whose *newest file write* is >30 days old gets `robocopy /E /MOVE`'d to `D:\3D-Backups\<name>`, then the old C: path is recreated as a **directory junction** into D:. The folder still opens / slices / browses at its original C: path; the bytes live on D:. Junctions need no admin.
+· **Schedule:** Task Scheduler `3DRecipesNightlyArchive`, daily 01:00, `/it` (interactive, runs in Jake's session). One hour ahead of the 02:00 NAS backup so the move settles before the mirror walks.
+· **Backup interaction:** none needed. `nightly_nas_backup.bat v7.2` already has `/XJ` on both robocopy lines, so it skips the junctions on C: and stores the archived content once via the D: mirror — no double-store.
+· **Behavior to know:** *any* folder going 30 days without a file write auto-sweeps — including active projects that are sliced-from but not saved-to (Phoenix did this SD22; harmless via junction). The only real cost is slower slicing if D: is a spinning disk.
+· **Escape hatch (NOT YET in the script):** to pin an active project to the C: SSD regardless of age, add a 2-line exclude list —
+```powershell
+$Exclude = @('Phoenix')   # active projects to keep on C: regardless of age
+```
+  and skip any folder whose `.Name` is in `$Exclude`. Wire this when a hot project needs SSD speed.
 
 ---
 
@@ -136,7 +159,7 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · **Slicer:** Bambu Studio (P1S uses X1C profile — no native P1S profile exists)
 · **Heater block:** now OEM Bambu Hotend assembly.
 · **AMS:** standard 4-slot.  AMS2Pro. Has drying capabilities.
-· **Camera:** Tapo C111 at `192.168.50.199` (powered independently — no longer USB-from-P1S, that failure mode is retired)
+· **Camera:** Tapo C111 at `192.168.50.199` (powered independently — power-cycle is clean, doesn't touch the printer). **Served to browsers via go2rtc WebRTC** (sub-second; see §3 go2rtc subsection), NOT ffmpeg-HLS (retired SD21). **⚠️ ~2-pull RTSP ceiling — STANDING CONSTRAINT:** the C111 serves ~2 concurrent RTSP pulls; a 3rd starves/black-screens the others. go2rtc is the one steady puller, leaving ONE free slot (the phone Tapo app). Opening VLC, a 2nd native client, or any other heavy consumer = instant black for everyone — close one before ever concluding "the cam's broken." This ceiling was the root cause of the SD21 afternoon black-screen marathon (VLC left open = the 3rd puller). RTSP creds in `config.json` (plaintext) + `go2rtc.env` (`0600`).
 
 ---
 
@@ -176,4 +199,6 @@ Jim's side has no split — `jim@ethosteleos.dev` for everything Ordo-related.
 
 ---
 
-*Last updated: 5-22-26 by Jake. SD20b: corrected TheNightsWatch code versions (server.js v3.2 + index.html), logged the ffmpeg SIGTERM slow-kill + frozen-but-flowing failure mode. Surgical edits only going forward.*
+*Last updated: 5-24-26 by reference-fold-in Claude and Jake. SD21 + SD22 folded in: §3 — printer cam migrated off ffmpeg/HLS onto go2rtc/WebRTC (server.js v3.3, camera pull removed; new go2rtc subsection; frozen-but-flowing note marked historical/pipeline-retired with go2rtc immunity UNPROVEN; stale ffmpeg systemd + floor-metrics facts scrubbed). §4 — pinned Workhorse `.238`. §5 — added the 3D Recipes Nightly Archiver. §7 — documented the Tapo C111 ~2-pull RTSP ceiling as a standing constraint. Surgical edits only going forward.*
+
+*Prior: 5-22-26 by Jake. SD20b: corrected TheNightsWatch code versions (server.js v3.2 + index.html), logged the ffmpeg SIGTERM slow-kill + frozen-but-flowing failure mode.*

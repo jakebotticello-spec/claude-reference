@@ -11,9 +11,41 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-24 — SD22 (3D Recipes nightly archiver + retroactive SD21 cam-migration log)
+
+**Scope:** JAKE-STACK §5 (new archiver subsection); plus the retroactive SD21 cam-migration entry below, logged this session.
+
+**Change(s):**
+- **JAKE-STACK §5** — added the **3D Recipes Nightly Archiver** as standing infra: `Archive-3DRecipes.ps1` (v1.0) sweeps any `C:\3D Recipes` top-level folder >30 days cold to `D:\3D-Backups\<name>` nightly at 01:00, then junction-relinks the C: path (opens/slices in place; bytes on D:). Task `3DRecipesNightlyArchive`, one hour ahead of the 02:00 NAS backup so the move settles before the mirror walks. Backup unaffected — `nightly_nas_backup.bat v7.2` already carries `/XJ`, so it skips the junctions and stores the archived content once via the D: mirror (no double-store). Escape-hatch `$Exclude` list documented but NOT yet coded.
+- **Retroactive log:** the SD21 go2rtc cam migration (entry below) never landed in the reference layer — caught at SD22 session start and logged so a next-Claude reading §3 doesn't believe the old ffmpeg/HLS pipeline is live.
+
+**Why:** Keeps the 3D Recipes SSD lean without breaking any slicer paths, and closes the SD21 doc-lag.
+
+## 2026-05-23 — SD21 (Printer cam: ffmpeg→HLS retired, migrated to go2rtc WebRTC) — logged retroactively SD22
+
+**Scope:** JAKE-STACK §3 (VM 100 / go2rtc), §4 (Workhorse IP), §7 (camera / Tapo ceiling); Lore Bible §5.
+
+**Change(s):**
+- **JAKE-STACK §3** — camera pipeline migrated ffmpeg→HLS → go2rtc WebRTC. `server.js` v3.3 (camera pull removed; now serves dashboard, printer MQTT/WS, `/api/config`, `/api/printer`, kiosk routers only); new go2rtc subsection (binary, `go2rtc.yaml`/`go2rtc.env`, systemd service, ports :1984/:8555, passthrough/no-transcode). Frozen-but-flowing note marked historical/pipeline-retired — go2rtc immunity to the Tapo wedge UNPROVEN. Stale ffmpeg systemd-SIGTERM + floor-metrics facts scrubbed (current state = current state).
+- **JAKE-STACK §4** — pinned Workhorse `.238` (surfaced via a go2rtc consumer `remote_addr`).
+- **JAKE-STACK §7** — documented the Tapo C111 ~2-pull RTSP ceiling as a standing constraint (root cause of the SD21 black-screen marathon — VLC was the 3rd puller); camera now served via go2rtc WebRTC.
+- **Lore Bible §5** — added "The Diagnostic Tool Became the Bug" (VLC as the 3rd RTSP puller starving go2rtc; the codec investigation was a red herring on a starved feed).
+
+**Why:** The frozen-but-flowing ffmpeg pipeline that opened the whole cam saga is retired; cam is on go2rtc WebRTC — single-puller, sub-second, phone-friendly. The afternoon's codec theory was a red herring; the real cause was the 2-pull ceiling.
+
+## 2026-05-23 — Cypher S8 (self-citation rule + the doc-is-an-echo scar)
+
+**Scope:** JAKE-RULES §5.1; Lore Bible §5.
+
+**Change(s):**
+- **JAKE-RULES §5.1** — appended the self-citation reinforcement: a document is not a verification source for its own claims (least of all one you authored); ground truth is the live system (the dashboard, `railway variables`, the running process, the file on disk), never the doc that describes it.
+- **Lore Bible §5** — added "The Dashboard Is Ground Truth, The Doc Is An Echo": CC confirmed an injected Railway var off a self-authored CLAUDE.md §7 note (itself sourced from a handoff "likely"), shipping a silent-no-op guard + a false fact into the source-of-truth doc; the live dashboard (`RAILWAY_ENVIRONMENT_NAME`/`_ID`, no bare form) disproved it in two clicks.
+
+**Why:** The pattern bit twice in one session and the second time shipped an actual error into CLAUDE.md. Bound to a rule so future-Claude (OC and CC) doesn't re-buy it.
+
 ## 2026-05-23 — Cypher S7 (universal layer: §2 CC-delivery rules + new §17 session-close process)
 
-**Scope:** JAKE-RULES §2 (two additions), new JAKE-RULES §17, downstream renumber (§17→§18, §18→§19).
+**Scope:** JAKE-RULES §2 (two additions), new JAKE-RULES §17, downstream renumber (§17→§18, §18→§19); Lore Bible §5 (deferred entry, landed 5-24).
 
 **Change(s):**
 - **§2 — OC→CC delivery default** (above Non-CC workflows): OC hands CC instruction sets as a single chat code block by default; the lone exception is a kickoff embedding whole code files (nested `ts`/`sql` fences break inside an outer block) → deliver each file as its own block, or fall back to a single self-contained `.md` and say so. Token-economy: don't build a file when a block does the job.
@@ -23,6 +55,7 @@ Format:
 - **§17 — new section: Session Close & Handoff Generation.** Codifies the end-of-session bundle: (1) tactical handoff file [PK + archive], (2) separate proposed-reference-changes file [→ rules repo on approval], (3) project-centric reference artifacts [PK + archive], (4) in-chat next-session handoff prompt [code block, generated last]. Four operating principles: verbose-is-mandate, downstream-flags (name the horizon), honest judgment-call ledger (call/reasoning/confidence/source), infra sweep (route incidental system/subscription/hardware finds into JAKE-STACK/Lore via the proposals file).
 
 - **Renumber:** former §17 Stale Rules Graveyard → §18; former §18 The Why → §19.
+- **Lore Bible §5** (Pattern Stories) — added "The Layer-Boundary Blind Spot": `/jedi-council` had 4 of 5 reviewers (incl. the Security Auditor) miss the cross-tenant FK gap that lived below the RLS layer everyone verified; only the schema-first specialist caught it. *Deferred from S7; landed in the 5-24 consolidation pass.*
 
 **Why:** §17 is the package-out mirror of §15/§16's load-in — it closes the persistence loop so next-Claude picks up seamlessly instead of reverse-engineering state. It was earned over many sessions of frustration with the state of current-Claude's project ignorance and context confabulation.  The §2 rules came out of the S7 1b build: delivery-format token economy, and the standing per-turn drift-catch that's repeatedly caught CC chasing shiny things mid-build.
 
