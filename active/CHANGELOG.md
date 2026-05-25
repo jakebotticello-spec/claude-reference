@@ -11,6 +11,17 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-25 — apparatus S2 (cross-project corpus re-architecture)
+
+**Scope:** JAKE-RULES §8 + §5.1; Lore_Bible §5.
+
+**Change(s):**
+- **JAKE-RULES §8 (Memory / Context)** — added the project-scoped-retrieval rule: `conversation_search` / `recent_chats` / project-knowledge are scoped to the project the chat lives in; the durable stores (codeload git, CC-on-disk, Supabase) are project-agnostic. Cross-project work runs non-project (OC) + CC-on-disk, never boxed inside one project.
+- **JAKE-RULES §5.1** — added "the export-`project`-field that wasn't there" to the confabulation-examples list. A corpus partition was planned on a `conversations.json` `project` field asserted from memory; CC inspecting the real 348MB export found no such field (only incidental UUID prose). The verify-before-trust gate caught it pre-build.
+- **Lore_Bible §5** — added war story "The Field That Wasn't There (apparatus S2)," sibling to "The Dashboard Is Ground Truth, The Doc Is An Echo." Same lesson family: the doc/memory is an echo; the live system (here, the 348MB of bytes) wins.
+
+**Why:** The apparatus cross-project corpus build surfaced (a) the project-scoping wall that limited every prior excavator, and (b) a clean §5.1 fire — both worth standing rules so neither is re-learned.
+
 ## 2026-05-24 — SD24 (Castle Black VM 100 monitor recovery + liveness-gap)
 
 **Scope:** JAKE-STACK §3 (VM 100 — TheNightsWatch standing risks).
