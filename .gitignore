@@ -1,3 +1,9 @@
-# nothing to ignore yet, scaffolding
+## Raw data archive — holds the unscrubbed S11 credential, NEVER push
+apparatus-archive/
+
+## Holds various Cypher-related context files and working-file reference-docs not needed for current work.
+Chat Context Files/
+
+## os junk
 .DS_Store
 Thumbs.db
