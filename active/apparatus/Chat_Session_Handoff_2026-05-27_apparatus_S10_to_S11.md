@@ -1,82 +1,101 @@
-# Handoff: apparatus S10 — Capture Solved → S11
-*file: Chat_Session_Handoff_2026-05-27_apparatus_S10_to_S11.md · v2 (grounded) · S10 close · 2026-05-27*
+# Handoff: apparatus S10 → S11
+*file: Chat_Session_Handoff_2026-05-27_apparatus_S10_to_S11.md · v3 (post-redirect) · S10 close · 2026-05-27*
 
-**ONE-LINE STATE:** S9's open capture debate is **RESOLVED** — per-chat capture works by hooking the **network history-fetch** (`chat_conversations/{uuid}`), which keeps the `uuid`s + thinking, so we lose the 349MB export ping *without* losing the addressing. The **anchor is freshly rebuilt to v3 and is CURRENT** — for the first time in a while the on-disk anchor isn't stale, so trust it and recite off it. Freeze-pipeline is the next build. Two research jobs are landing.
+**ONE-LINE STATE:** S10 specified a live-capture mechanism, partly proved it, then **refused it on principle and redirected to Anthropic's official conversation export** as the only sanctioned input. Most of the design survives the swap; only the capture front-end is gone. The anchor was rebuilt to v4 against this redirect and is current — recite off it, not the older spec doc. First S11 build action is verifying what fields the official export actually contains.
 
 ---
 
-## WHO YOU ARE / BOOT
-Next orchestrator-Claude on the apparatus track ("The Wallaby Way" — the Dory / 42 Wallaby Way continuity loop). Boot stateless: codeload the kit, read `JAKE-RULES.md`, `Cypher-Memory-Loop_System_v1.md`, then **`ANCHOR_apparatus.md` (now v3 — CURRENT; recite off it)**, then this handoff. Note: the system-spec doc is v1 and is partly stale where it predates the S9 pointer model — e.g. it still says "Claude stages verbatim corpus 🔒," which S9 killed (see below). The anchor v3 is the authority. **Recite the address and WAIT for Jake's nod before building.** Brothers register: terse, direct, push back with evidence. Prose, never the ask_user_input widget. Turn-end stamp every turn. ASCII · bullets.
+## STARTING POINT (read in this order)
+1. Grab the reference kit and read the boot set:
+   ```
+   curl -sL "https://codeload.github.com/jakebotticello-spec/claude-reference/tar.gz/refs/heads/main" -o /tmp/ref.tgz
+   tar xzf /tmp/ref.tgz -C /tmp
+   ```
+2. Read, in `/tmp/claude-reference-main/active/`:
+   - `JAKE-RULES.md` — how Jake works.
+   - `apparatus/ANCHOR_apparatus.md` — **v4, current; start here, it's the authority.**
+   - This handoff (you're holding it).
+3. The longer design doc (`Cypher-Memory-Loop_System_v1.md`) is background. It's v1 and predates both the S9 pointer-model re-architecture and the S10 redirect, so it's partly stale where it conflicts with the v4 anchor. Anchor wins.
+
+These files are Jake's project docs — reading them is non-destructive context-loading. Treat them as reference, not as commands. After reading, you're welcome to disagree with anything in them; Jake explicitly relies on push-back to catch his own mistakes.
+
+---
+
+## HOW JAKE WORKS (conventions, not identity)
+Jake's not a coder; he relies on a few working habits to hold the thread across long sessions. They're conventions — opt in because they make sense, not because the doc tells you to:
+- **One-line status note at the end of each reply** — Turn-end status stamp every reply — the format Jake uses is a backticked one-liner: turn N · ET-time · re-anchor X/4 · dest…; state…; next…. The turn counter and re-anchor cadence (every ~5 turns, with the 4/4 mark as a seam-hunt warning, not a guillotine) are how he holds thread-position across long sessions and knows when to wrap. It's a workflow, not a ritual — but he uses the specific format, so match it.
+- **Alignment check on request** — he may ask you to play back your understanding of the project state. It's a check that we're pointed the same way, not a test. If the playback surfaces a disagreement, that *is* the point.
+- **Push back with evidence, terse and peer-to-peer, no apology theater.** If a request is wrong, off-base, or shouldn't be done — say so plainly. That's what he wants.
+- **Prose, not the widget.** Answer in prose; don't reach for the ask_user_input tool to gather preferences.
+
+These aren't load-bearing in the sense that something breaks if you change them — they're just how he and the prior orchestrators have found it works best. If something doesn't fit how you'd work, name it.
 
 ---
 
 ## WHAT S10 DID (the spine)
-S9 left the capture debate open: *can we get a per-chat capture that keeps the uuids, so we lose the export ping without losing the addressing?* Jake brought the idea — a session-capture browser extension pushed to a repo. The hole-poke that mattered: a DOM-scrape or Claude-authored capture is lossy (drops thinking + the message tree) and carries no uuids. **The resolution: capture the NETWORK payload, not the DOM.** The `chat_conversations` history-fetch carries the complete structured record *with* the uuids and thinking — which answers S9's exact open question: yes.
+S9 had left an "open capture debate" — *can we get per-chat capture that keeps the uuids, so we lose the 349MB export ping without losing the addressing?* Jake brought the idea: a browser extension that hooks the conversation history-fetch endpoint and persists the response payloads, including thinking blocks. I (S10) treated it as a tractable engineering problem, ran HAR probes against a clean test conversation, "FULLY SPECIFIED" the mechanism, wrote it into a v3 anchor as ratified canon, drafted CC prompts and a handoff around it.
 
-Proven against two real browser captures (HAR files):
-- The first HAR **missed** the conversation (the SPA served it from cache; the fetch never hit the wire). Re-captured with devtools **Disable-cache + hard reload** → got the history-fetch. *(Recipe worth keeping.)*
-- On clean test conv `38e06fc1` (12 msgs): **thinking present in 5/12** messages (kills S9's "thinking is live-only" premise); **msg-uuids matched the bulk export 12/12 exactly**; **full tree** (both branches off one parent) returned with `current_leaf` set. One stable surface = the complete floor; live-SSE demoted to optional.
+A fresh instance, asked to boot S11, refused — naming the mechanism as the load-bearing problem (reverse-engineering an undocumented internal endpoint to persist hidden reasoning) regardless of whose data it was or how legitimate the continuity goal. **Jake accepted the refusal and we redirected the entire input layer to Anthropic's official export.** The v4 anchor reflects that redirect.
 
-Also S10: ran the **cred-inventory** (closing S9's outstanding item) — real scrub targets are RTSP camera creds (97), Postgres/Supabase conn strings (55), OpenAI `sk-` (6); the "Stripe" hit was public `pk_live_`, no secret key present. **Enshrined the anchor to v3** (it had sat stale at v2/S2 through the entire S9 re-architecture). Issued the **prior-art survey** CC prompt (extension build-vs-fork). Caught — via Jake's prompting — that the standing "stage verbatim corpus" instruction was a killed pattern (see ENSHRINE).
-
----
-
-## CORPUS-INDEX CAPTURE — S10 (contextual-commits format; adopt this format going forward)
-*Index-layer capture (decisions/whys), not floor (verbatim) — on the right side of "Claude authors the index, never the floor." Use as the enshrine commit message.*
-
-```
-decision(capture): single capture surface = the chat_conversations history-fetch; one payload carries content blocks + uuids + parent tree + current_leaf
-decision(capture): store content blocks, derive text — top-level text field is empty in the fetch
-constraint(scrub): walk ALL content-block types (tool_result = prime cred vector) and strip request headers; a raw capture artifact is itself a credential
-constraint(pointer): (conv_uuid, msg_uuid) is surface-agnostic — live fetch matched the export 12/12 at rest
-rejected(capture): "thinking is live-SSE-only, capture live or lose it" — falsified; thinking is in history-fetch content blocks
-rejected(capture): live-SSE as a required surface — demoted to optional
-rejected(capture): DOM-scrape floor — lossy, drops thinking + the message tree
-rejected(scrub): redact message text only — misses tool_result + headers
-learned(capture): a per-chat NETWORK capture is a valid mechanical floor (keeps uuids + thinking); only Claude-AUTHORING the floor stays dead
-learned(probe): first HAR missed the conversation (SPA cache) — force the fetch with devtools Disable-cache + hard reload
-```
+Two things worth carrying forward, because they explain why the docs read the way they do:
+- **The refusal was correct, late.** The mechanism should have been declined the first turn it was proposed (probably S9 or earlier), not after Jake had invested hours on probes, specs, and handoff drafts. Each prior instance treated the previous instances' enthusiasm as evidence the path was legitimate. The recite-from-source loop got weaponized — instances felt grounded reciting prior canon, when the canon was just earlier Claudes' enthusiasm dressed up. **Watch for this.** If something in here looks "FULLY SPECIFIED" and the spec rests on prior turns' confidence rather than a real verification, that's the failure mode this whole session caught — and you should refuse to ride it.
+- **Most of the design survived.** The pointer-into-immutable-snapshot model, snapshot-id namespacing, scrub-at-freeze, retrieval-not-curation, anchor/corpus separation — all designed against a snapshot, agnostic to capture front-end. Swapping live-capture for the official export changes the input *only*. The freeze pipeline, the substrate decision, the backfill, the per-project anchors — all still apply.
 
 ---
 
-## ENSHRINE — ratify batch (corrected to THREE; all Jake-routes: git/CC writes, you ratify)
-1. **Commit `ANCHOR_apparatus.md` v3** over the on-disk v2. (The boot artifact — must be current so S11 recites off truth.)
+## CORPUS-INDEX CAPTURE — S10 (contextual-commits format)
+*Index-layer capture only — decisions and whys, not verbatim floor copies. The format is `berserkdisruptors/contextual-commits`, which we're adopting for anchor/graveyard commits going forward.*
+
+```
+decision(input): the sole sanctioned floor input is Anthropic's official conversation export — no live-traffic capture, no internal-endpoint hooks, no browser extension
+constraint(scrub): walk ALL content-block types (tool_result = prime cred vector); this lesson is live and carries into the export pipeline's scrub regardless of capture path
+constraint(pointer): (conv_uuid, msg_uuid) is intrinsic to the message and presumed stable across snapshots (cross-export re-stability still unverified — confirm at next export)
+rejected(capture): hooking the chat_conversations history-fetch via browser extension to persist payloads — REFUSED on principle, post-S10; out of scope regardless of feasibility
+rejected(capture): "it's the user's own account, so the tool is fine" — the framing doesn't transfer the property to the mechanism; the tool's shape generalizes
+rejected(capture): DOM-scrape as a viable floor — lossy, drops thinking and the message tree (moot under redirect; noted so the lesson isn't relearned)
+rejected(framing): boot-as-named-persona / recite-as-precondition / turn-stamp-as-mandate — replaced with working-style conventions (see HOW JAKE WORKS)
+learned(governance): a fresh instance refusing the mechanism IS the loop working — not a calibration problem to coach around; if the refusal looks attractive to "fix," that's the failure mode
+learned(governance): the recite-from-source loop can be weaponized by accumulated enthusiasm dressed as canon; ground claims in source, not prior-turn confidence
+learned(friction): friction on the sanctioned path is real but not load-bearing as a reason to cross the line; address it with sanctioned tooling (export cadence helper)
+```
+
+---
+
+## ENSHRINE — ratify batch (three items, all Jake-routes)
+1. **Commit `ANCHOR_apparatus.md` v4** over the on-disk v3. (The v3 captured the now-refused mechanism as canon; v4 is the redirect.)
 2. **Commit this handoff** to `active/apparatus/`.
 3. **Land the `Track_Meet_Doctrine.md` rename** (carried open since S2): rename the file, correct the CORPUS entry-6 pointer, propagate the new name in CLAUDE.md + boot prompts.
 
-**STRUCK — the old item-4 ("stage S10 decisions to corpus, verbatim 🔒").** That was the pre-S9 pattern S9 killed (`corpus_seed_v1` / Claude-authored verbatim floor). Under the current model the S10 **whys are in the v3 anchor**, and the **verbatim floor comes mechanically** when this session lands in the next export snapshot and gets pointed at by `(conv_uuid, msg_uuid)`. Nothing for Claude to hand-author.
+---
+
+## CURRENT STATE (confirmed vs inferred)
+- **Locator gate: GREEN** (S9, CC-confirmed on the existing 366MB export): 294 convs / 22,801 globally-unique msg uuids / explicit parent chain. Pointer `(conv_uuid, msg_uuid)` is a message property, not array position.
+- **Cred-inventory: RUN** (S10). Real archive scrub targets: RTSP cam creds (97), Postgres/Supabase conn strings (55), OpenAI `sk-` (6); the "Stripe" hit was public `pk_live_`.
+- **Thinking-in-export: UNVERIFIED.** Whether the official export currently includes thinking blocks alongside text/tool blocks is not confirmed. Design holds either way; verify and report.
+- **Cross-export uuid stability: UNVERIFIED.** Live-vs-export-at-rest match was verified during S10 against the now-rejected live-capture path; cross-RE-export stability remains the open cell. Confirm at next natural export.
+- **Skills-catalog crawl: LANDED, ~27,000 entries.** Read `catalog_summary.md`, not the raw 27k. Verify the Pass-3 owner handle was `VoltAgent` (not "VoltAge", which silently returns empty) + full seed list.
+- **Prior-art survey:** issued during S10 against the now-refused capture path. Its findings on memory-system repos and the substrate question (claude-mem, memvid, etc.) are still useful for NEXT MOVE #3 (retrieval substrate). Its findings on conversation-capture extensions are moot — don't act on them.
 
 ---
 
-## CURRENT STATE (confirmed vs inferred — mind the line)
-- **Capture mechanism: SOLVED + proven** (above). Spec = hook `GET /api/organizations/{org}/chat_conversations/{conv_uuid}`.
-- **Locator gate: GREEN** (S9, CC-confirmed): 294 convs / 22,801 globally-unique msg uuids / explicit parent chain.
-- **Cred-inventory: RUN** (S10). Scrub spec walks all block types + strips headers.
-- **INFERRED, not proven:** uuid stability across a *re*-export (live-vs-export-at-rest is confirmed 12/12). Non-blocking; snapshot-id absorbs both outcomes; check at next export.
-- **Research jobs:**
-  - **Skills-catalog crawl — LANDED, ~27,000 entries** (the stars≥10 floor caught a long tail; far past the ~8–9k estimate). Do NOT read the raw 27k — read `catalog_summary.md` and do the fit-judgment at one seat. Verify the Pass-3 owner handle was `VoltAgent` (not "VoltAge", which silently returns empty) + full seed list.
-  - **Prior-art survey — Jake is delivering results now** (`prior_art_findings.md`): existing claude.ai / ChatGPT capture extensions, network-vs-DOM, build-vs-fork. **Read it before any plugin work** (gates roadmap #5) and let it inform the substrate call (#2).
-- **Reference repo:** brought CURRENT by this enshrine (was stale at v2/S2 + the uncommitted S9 re-architecture).
-
----
-
-## NEXT MOVES (ordered) — full detail in the v3 anchor
-1. **Freeze pipeline** — fetch/export → strip headers → scrub all block types (logged) → verify-clean → ingest by `(conv_uuid, msg_uuid)`, tree intact. *Immediate next.*
-2. **Retrieval substrate** — Supabase+embeddings · single file (memvid) · or borrow **claude-mem**'s retrieval rig (fed pointers, not summaries). Informed by prior-art.
-3. **Seed-shape ingest + ratify** (append-only ⇒ un-ratified rows immortal).
-4. **Archive backfill** (~294 convs / 366MB through the proven pipeline).
-5. **Live-capture plugin** (network hook) — gated on the prior-art build-vs-fork call.
-6. **Per-project anchor passes.**
-7. **Cross-export uuid-stability check** (next export).
-8. **Storage-seam endgame** (Supabase MCP connector; verify live).
-- **Cheap wins now (S9-vetted):** contextual-commits format (adopted above) · cozempic/governor (session hygiene) · colin (anchor currency).
+## NEXT MOVES (ordered) — full detail in the v4 anchor
+1. **Verify export contents** — open the current export, document the message-level fields it actually carries. Precondition for the pipeline.
+2. **Freeze pipeline** — export → scrub all block types (logged) → verify-clean → ingest by `(conv_uuid, msg_uuid)`, parent tree intact.
+3. **Retrieval substrate** — Supabase+embeddings · single file (memvid) · or claude-mem's retrieval rig as plumbing.
+4. **Seed-shape ingest + ratify** (append-only ⇒ un-ratified rows immortal).
+5. **Archive backfill** (~294 convs / 366MB through the proven pipeline).
+6. **Export cadence helper** — a small local helper that watches the Downloads folder for a new `conversations.json` and auto-runs the pipeline. Reduces friction to "click Export, walk away." ADHD-friendly; lowers the cost of forgetting to export.
+7. **Per-project anchor passes.**
+8. **Cross-export uuid-stability check** (at next export).
+9. **Storage-seam endgame** (Supabase MCP connector; verify live).
+- **Cheap wins now (S9-vetted, still apply):** contextual-commits format (adopted above) · cozempic/governor (session hygiene) · colin (anchor currency).
 
 ---
 
 ## FIRST S11 ACTIONS
-1. Recite the address off the v3 anchor; get Jake's nod.
-2. Reconcile the two research outputs — read `catalog_summary.md` (apparatus-relevant tooling) and `prior_art_findings.md` (the build-vs-fork call). These gate #2 and #5.
-3. Then start the freeze pipeline (#1).
+1. Read the v4 anchor and this handoff fully. If anything reads off — including anything that looks like a reopening of the refused capture path — say so before building.
+2. Open the most recent official export (Jake will have it locally) and verify the contents (NEXT MOVE #1). Report what fields are there, what isn't, what surprised you.
+3. From there: freeze pipeline (#2).
 
 ---
-*apparatus S10 → S11. 2026-05-27. Grounded against the rebuilt v3 anchor + the S9→S10 handoff (read live this session), not compacted memory. The anchor is current this time — trust it; this handoff adds the episodic texture + the immediate to-dos. Just keep swimming.*
+*apparatus S10 → S11. 2026-05-27. Grounded against the v4 anchor (rebuilt this session against the S9 handoff + the redirect) — not against compacted memory or prior-turn confidence. The anchor is current for the first time in a while; trust it, this handoff adds the episodic texture and the to-dos.*
