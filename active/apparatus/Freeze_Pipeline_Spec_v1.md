@@ -73,6 +73,7 @@ Four small probes against the existing archive must close before Stage 1 impleme
 · **0.2 Attachments and files.** Find conversations with non-empty `attachments` and non-empty `files` on at least one message. Sample one of each. Key question: **is file content inlined in the export, referenced by handle, or both?** This determines whether the scrub-walk needs to descend into them.
 · **0.3 Summaries entry shape.** One sanitized skeleton of a single entry from a thinking block's `summaries` list. Field set, types, length placeholders.
 · **0.4 Token-budget block shape.** 14 instances across the archive — what are they? Single sanitized skeleton.
+· **0.5 Field-semantics characterization for `name` and `summary`.** Sample a handful of conversations: how often is each field populated, how often empty, observable signs of user-rename vs model-authorship (e.g., does `summary` tend to read as descriptive prose while `name` reads as title-cased keywords). This is the last hedge on the floor-scoping decision — even though both are dropped at ingest under the corrected S11 floor rule, characterizing their actual semantics confirms the symmetric-drop is correct and lets future-Claude resist any "but `name` is more durable" re-litigation.
 
 If any probe surfaces something architecturally unexpected (a new content type, an inlined-file path nobody saw, a field shape that breaks the scrub-walk model), the spec gets a v2 before Stage 1 proceeds.
 
@@ -192,13 +193,13 @@ Per-conversation header written first per conv (one line per conv):
 {
   record_type: "conversation_header",
   snapshot_id, scrub_version,
-  conv_uuid, conv_name,
+  conv_uuid,
   created_at, updated_at, account_uuid,
   message_count, has_branches  // any msg that is parent to ≥2 children
 }
 ```
 
-**Conversation-level `summary` is NOT carried.** It is model-authored at original generation but USER-MUTABLE post-generation (Jake renames conversations every session). Carrying it would treat session-mutable metadata as floor — a category error. See §5 invariants.
+**Conversation-level `name` and `summary` are BOTH dropped at ingest.** Both fields are user-affected and not stable model-authored evidence: `name` is the user-renameable sidebar title (Jake renames every session); `summary` is model-generated and may evolve. Neither qualifies as floor; both fail symmetric application of the floor rule. Carrying either would treat session-affected metadata as evidence — a category error. Human-readable labels at retrieval are derived from the message stream itself, or live in per-project anchors. See §5.
 
 **Order:** conversations written in `created_at` order; within each conversation, messages in `created_at` order. **Branches preserved** — every node lands as its own record with its real `parent_message_uuid`. No flattening, no branch selection.
 
@@ -213,7 +214,7 @@ These are the rules the pipeline enforces, not just intentions. A violation here
 · **5.1 Original export is preserved.** `raw.json` inside any snapshot dir is read-only after Stage 1.
 · **5.2 Append-only at snapshot granularity.** Sealed snapshots never mutate. Regex updates create new scrub-versions, not patched files.
 · **5.3 The message stream is floor.** Every user message and every assistant message is preserved verbatim through scrub and ingest. The scrub redacts cred *substrings* within content; it never discards a message, never modifies a message uuid, never alters parent-child structure. User messages and assistant messages are equal floor citizens.
-· **5.4 Floor scope: content yes, mutable metadata no.** Per-message content (text, content blocks, attachments, files, timestamps, uuids, sender) IS floor. Conversation-level metadata that's user-mutable (the `summary` field, conversation `name`) is NOT floor — it's session-state that happens to live in the export. The `summary` is dropped at ingest; `conv_name` is preserved in headers because it's a useful index hint, but it's understood as mutable (not authoritative evidence).
+· **5.4 Floor scope: per-message content yes, conv-level mutable metadata no.** Per-message content (text, content blocks, attachments, files, timestamps, uuids, sender) IS floor. Conversation-level metadata that's user-affected — both `name` (user-renameable title) and `summary` (model-generated, may evolve) — is NOT floor. Both are dropped at ingest. Conversation headers carry only stable structural data (uuids, timestamps, counts, branch-bool). Human-readable labels live at retrieval time, derived from the message stream, or in per-project anchors — not in snapshot headers.
 · **5.5 Scrub walks all strings recursively.** Type-agnostic. Future-proof against schema evolution.
 · **5.6 Verify is a hard gate.** No cred in the scrubbed file, or no ingest from that scrub run.
 · **5.7 Branches preserved.** `chat_messages` is a tree; the parent chain is verbatim.
@@ -249,7 +250,7 @@ Out of scope for this artifact. Each lives behind its own seam in the pipeline.
 
 ## 8. Change log
 
-· v1 · 2026-05-27 · apparatus S11 · initial freeze. Folded: S11 export verification (5 block types confirmed, thinking-block schema confirmed, conv-level summary identified as user-mutable session-state); delta-ingest via pure uuid-diff (date dropped as filter mechanism); scrub versioning via overlay (`scrub-vN/` dirs under each snapshot); floor-rule clarified (message stream is floor; mutable conv metadata is not; user messages and assistant messages equal). Pre-Stage-1 work blocked on §4 Stage 0 probes (four small).
+· v1 · 2026-05-27 · apparatus S11 · initial freeze. Folded: S11 export verification (5 block types confirmed, thinking-block schema confirmed, conv-level fields identified as user-affected non-floor); delta-ingest via pure uuid-diff (date dropped as filter mechanism); scrub versioning via overlay (`scrub-vN/` dirs under each snapshot); floor-rule clarified (message stream is floor; conv-level mutable metadata is not; user messages and assistant messages equal). **Pre-commit correction:** initial draft of this spec carried `conv_name` in headers as a mutable index hint while dropping `summary` — inverted field semantics (the actively user-mutated field is `name`, not `summary`). Caught by peer-instance review of the S11 ignition prompt before bundle reached the repo. Symmetric drop landed: both `name` and `summary` out. Added Stage 0 probe 0.5 (field semantics) to close the residual hedge. Pre-Stage-1 work blocked on §4 Stage 0 probes (now five).
 
 ---
 

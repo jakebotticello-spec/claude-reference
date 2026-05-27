@@ -9,7 +9,7 @@
 
 ## ONE-LINE STATE
 
-S11 closed the open UNVERIFIED cell from the v4 anchor (thinking-in-export = CONFIRMED) and the content-block-type inventory (5 types), then froze a complete freeze-pipeline architecture as a real reference doc (`Freeze_Pipeline_Spec_v1.md`). The architecture incorporates two corrections that surfaced mid-session: floor-rule scoping (message stream is floor; user-mutable metadata is not) and delta-ingest via pure uuid-diff (date as filter mechanism: rejected, not used). Stage 0 (four small probes) is the only thing between this spec and implementation in S12.
+S11 closed the open UNVERIFIED cell from the v4 anchor (thinking-in-export = CONFIRMED) and the content-block-type inventory (5 types), then froze a complete freeze-pipeline architecture as a real reference doc (`Freeze_Pipeline_Spec_v1.md`). The architecture incorporates three corrections that surfaced mid-session: floor-rule scoping (message stream is floor; user-affected conv-metadata is not), delta-ingest via pure uuid-diff (date as filter mechanism: rejected, not used), and the symmetric drop of both `name` and `summary` from conversation headers (an initial inversion was caught pre-commit by peer-instance review). Stage 0 (five small probes) is the only thing between this spec and implementation in S12.
 
 ---
 
@@ -22,7 +22,7 @@ S11 closed the open UNVERIFIED cell from the v4 anchor (thinking-in-export = CON
    ```
 2. Read, in `/tmp/claude-reference-main/active/`:
    - `JAKE-RULES.md` — how Jake works (universal layer)
-   - `apparatus/ANCHOR_apparatus.md` — **v5 if Jake landed it post-S11; v4 otherwise — start here, it's the authority**
+   - `apparatus/ANCHOR_apparatus.md` — **v5, landed at S11 close — start here, it's the authority**
    - `apparatus/Freeze_Pipeline_Spec_v1.md` — the spec frozen this session
    - This handoff
 3. Skip the longer design doc (`Cypher-Memory-Loop_System_v1.md`) unless you're filling background gaps — it predates both the S9 pointer-model re-architecture and the S10 redirect. The anchor + this spec are current; that doc is partly stale.
@@ -66,7 +66,9 @@ These are the binding outcomes of S11. They went into the spec.
 
 · **D4.** Scrub regex set is versioned. Sealed snapshots get re-scrubbed under new versions as `scrub-vN/` overlays — never in-place. Original sealed `raw.json` is the true floor; scrubbed views are versioned interpretations of it.
 
-· **D5.** Floor-rule scope clarified: **the message stream is floor; user-mutable conversation-level metadata is not.** Per-message content (text, content blocks, attachments, files, timestamps, uuids, sender) is floor. The `summary` field is dropped at ingest (Jake renames conversations every session — it's session-state, not stable evidence). `conv_name` is preserved as a mutable index hint.
+· **D5.** Floor-rule scope clarified: **the message stream is floor; user-affected conv-level metadata is not.** Per-message content (text, content blocks, attachments, files, timestamps, uuids, sender) is floor. Both `name` (user-renameable sidebar title — Jake renames every session) and `summary` (model-generated, may evolve) are dropped at ingest. Conversation headers carry only stable structural data (uuids, timestamps, counts, branch-bool). Human-readable labels live at retrieval time (derived from message stream) or in per-project anchors — not in snapshot headers.
+
+  **Pre-commit correction note:** initial S11 close had `name` carried as a "mutable index hint" while `summary` was dropped. This inverted the field semantics (the actively user-mutated field is `name`, not `summary`). Caught by peer-instance review of the ignition prompt's ratify call; symmetric drop landed before this handoff reached the repo. Either the corrected D5 holds, or a future-Claude reading this should re-open the question with the field-semantics probe data in hand (Stage 0 probe 0.5).
 
 · **D6.** Verify-clean is a HARD gate, not a warning. A failed verify halts ingest and quarantines the scrubbed file for forensic review. Cred in immutable store = immortal leak; the entire point of scrub-at-freeze is to prove clean before ingest.
 
@@ -88,11 +90,12 @@ These are the binding outcomes of S11. They went into the spec.
 
 ## NEXT MOVES (ordered)
 
-1. **Stage 0 probes (four small).** Sanitized skeletons only; same protocol as the S11 thinking-block probe. See spec §4 Stage 0.
+1. **Stage 0 probes (five small).** Sanitized skeletons only; same protocol as the S11 thinking-block probe. See spec §4 Stage 0.
    - 0.1: field shapes for `text`, `tool_use`, `tool_result`, `token_budget`. **`tool_result` is the prime cred vector — its shape directly affects scrub correctness.**
    - 0.2: attachments + files. **Key question: is file content inlined in the export, referenced by handle, or both?**
    - 0.3: shape of one `summaries` entry inside a thinking block.
    - 0.4: shape of a `token_budget` block (14 in archive).
+   - 0.5: field-semantics characterization for `name` and `summary` (population frequency, user-rename vs model-authorship signs). Confirms the post-correction symmetric-drop decision.
 2. **Implement Stages 1–4.** Single Python script per spec §6. Test against the 366MB archive: should produce 1 baseline snapshot, scrub audit with the known cred counts, verify PASS, 22,801 message records + 294 conversation headers.
 3. **Seed-shape ratify** — anchor v4 NEXT MOVE #4 — prove the pipeline on a small batch, ratify before the full backfill (append-only ⇒ un-ratified rows are immortal).
 4. **Archive backfill.** Run pipeline at scale over the 366MB existing export.
@@ -111,8 +114,6 @@ These are the binding outcomes of S11. They went into the spec.
 
 · **Schema-drift handling is warn-not-stop.** If a future export adds a new field or block type, the type-agnostic scrub still walks strings, but the spec needs updating. A drift event should prompt an explicit spec review. Bites whenever Anthropic ships an export format change.
 
-· **`conv_name` carried as mutable index hint is in tension with the user-mutability rule that killed `summary`.** Both are user-mutable. The distinction made in S11: `conv_name` is a more durable reference handle than `summary` (titles change less often than summaries), and a name is useful as an index even if not authoritative. **This call should be ratified explicitly at S12 — if Jake disagrees, drop `conv_name` from headers too.**
-
 · **The retrieval substrate decision is downstream of seed-shape test.** Choosing substrate before ingesting any real data is premature. Bites at NEXT MOVE #5.
 
 · **Cross-export uuid stability remains UNVERIFIED.** Non-blocking; the design absorbs both outcomes via snapshot-id. But if uuids turn out to be NOT stable across re-exports, the delta-filter mechanism needs different identity semantics. Bites at NEXT MOVE #8.
@@ -123,9 +124,9 @@ These are the binding outcomes of S11. They went into the spec.
 
 Non-obvious calls made this session, logged for re-opening if needed.
 
-· **Call:** Drop `summary` from per-conv ingest record. **Reasoning:** Jake renames conversations every session — the field is user-mutable session-state, not stable model-authored evidence. **Confidence:** HIGH. **Source:** Jake's explicit characterization at S11 turn 17.
+· **Call:** Drop BOTH `name` and `summary` from per-conv ingest record. **Reasoning:** both fields are user-affected (`name` actively user-renamed every session; `summary` model-generated and may evolve), neither is stable floor evidence. Symmetric application of the floor rule. Human-readable labels live at retrieval / in per-project anchors, not in snapshot headers. **Confidence:** HIGH (post-correction). **Source:** Jake's explicit characterization of `name`-as-the-actively-renamed-field at S11 close, plus peer-instance review catching the field-semantics inversion in the initial draft.
 
-· **Call:** Keep `conv_name` in conversation headers despite it also being user-mutable. **Reasoning:** more durable than summary (renamed less frequently), useful as an index hint, identified as mutable rather than treated as floor. **Confidence:** MEDIUM. **Source:** orchestrator judgment, flagged for explicit S12 ratify (see Downstream Flags).
+· **Call (pre-commit correction record):** Initial S11 close draft carried `conv_name` as a "mutable index hint" while dropping `summary` — inverted-field-semantics error tracing back to S11 turn 17 where the orchestrator (me) conflated `name` and `summary` in describing which field is the sidebar title. Jake confirmed based on the wrong characterization; the decision rode through into the spec and handoff. **Caught pre-commit** by an S12-Claude review of the ignition prompt's flagged-for-ratify call. Corrected to symmetric drop before the bundle reached the repo. **Logged here** because the failure mode — orchestrator conflating two fields, user agreeing because the orchestrator's characterization was confident, decision propagating through canon — is exactly the recite-from-source loop the S10 post-mortem flagged. The fact that a peer instance caught it on read is the loop working.
 
 · **Call:** Date dropped entirely as delta-filter mechanism (not demoted to "performance hint"). **Reasoning:** two mechanisms doing the same job is a drift surface; uuid-diff covers backdated/dormant/skipped-day cases that date wouldn't. **Confidence:** HIGH. **Source:** Jake's clarification at S11 turn 13 + my own corrective at turn 13.
 
@@ -145,11 +146,9 @@ Non-obvious calls made this session, logged for re-opening if needed.
 
 · **Sampling-bug fix in `apparatus_capture_probe.py`.** CC's S11 follow-up probe collected 2 unique convs instead of the requested 5 (inner-loop break exits only the inner loop). Schema findings still hold (consistent across samples) but the script has a bug if reused. **Home: incidental fix at Stage 0 implementation; not a real issue at single-sample-class probes.**
 
-· **`Track_Meet_Doctrine.md` rename** — carried open since S2. Rename the file, correct the CORPUS entry-6 pointer, propagate the new name in CLAUDE.md + boot prompts. **Home: bundled with anchor v5 commit or next §17.2 ratify, whichever lands first.**
+· **`Track_Meet_Doctrine.md` rename** — carried open since S2. Rename the file, correct the CORPUS entry-6 pointer, propagate the new name in CLAUDE.md + boot prompts. **Home: bundled with next §17.2 ratify, whichever lands first.**
 
-· **Anchor v5 with S11 confidence-flag updates and new invariants.** This handoff lists the changes (D1–D8 + flag updates); the actual canonical anchor in the repo still says v4. Jake to route a v5 update — or do it as part of the same commit that lands the spec + this handoff. **Home: S11 close ratify batch.**
-
-· **Cyrus-Memory-Loop_System_v1.md deprecation/refresh.** The longer design doc is now substantially stale (it predates the S9 pointer-model and S10 redirect). It could be archived, refreshed against the v4/v5 anchor, or left alone with a header note pointing to the anchor. **Home: discretionary; no blocker.**
+· **Cyrus-Memory-Loop_System_v1.md deprecation/refresh.** The longer design doc is now substantially stale (it predates the S9 pointer-model and S10 redirect). It could be archived, refreshed against the v5 anchor, or left alone with a header note pointing to the anchor. **Home: discretionary; no blocker.**
 
 ---
 
@@ -162,10 +161,10 @@ Nothing new about Jake's standing systems surfaced this session. The 366MB conve
 ## PICKUP GUARDRAILS FOR S12
 
 · **Plan in OC, build in CC.** This pipeline is implementable directly; the substrate question is downstream.
-· **Stage 0 first, every time.** The architecture is locked, but the spec EXPLICITLY blocks implementation on Stage 0 probes. Don't skip them — they exist because two prior sessions discovered the "string" misread on `content` only mid-implementation.
+· **Stage 0 first, every time.** The architecture is locked, but the spec EXPLICITLY blocks implementation on Stage 0 probes (now five — the field-semantics probe was added during pre-commit correction). Don't skip them — they exist because two prior sessions discovered the "string" misread on `content` only mid-implementation, and the conv-field inversion only caught itself because somebody read the ratify call carefully.
 · **Trust Jake's reported state on probes.** When CC reports findings, ground orchestrator decisions on them. Don't relitigate the field inventory — it's done, it's correct, it's in this handoff.
 · **Prose questions only.** No ask_user_input widgets.
-· **Push back where the spec or this handoff is wrong.** Specifically: the `conv_name` decision (flagged in downstream flags) is the single most likely candidate for an S12 correction. Don't ride the canon if your read says it's wrong.
+· **Push back where the spec or this handoff is wrong.** The S11 conv-field correction is the recent example of why this matters: a confident-sounding canonical doc had an inversion in it, and only a peer-read caught it.
 · **Re-anchor every ~5 turns.** 4/4 = seam warning, not a guillotine. Jake uses the cadence to hold thread-position.
 · **Timestamps in status line: use bash `date`, don't confabulate.** Three-hour gaps between turns happen.
 
@@ -173,14 +172,14 @@ Nothing new about Jake's standing systems surfaced this session. The 366MB conve
 
 ## §17 ROUTING
 
-This handoff and the spec land in `active/apparatus/` of the rules repo on commit. The anchor v5 update (folding D1–D8 + the new invariants from this session) is proposed but not bundled — Jake to route the anchor delta separately to keep the canonical doc's commit deliberate.
+This handoff, the spec, and the v5 anchor all land in `active/apparatus/` of the rules repo on commit. The v5 anchor supersedes v4 in place.
 
 Files in this S11 close bundle:
 1. **§17.1** — this handoff (`Chat_Session_Handoff_2026-05-27_apparatus_S11_to_S12.md`)
 2. **§17.2** — no universal-layer changes proposed this session.
-3. **§17.3** — `Freeze_Pipeline_Spec_v1.md` (the spec). Anchor v5 update flagged as deferred (Tracked Items above).
+3. **§17.3** — `Freeze_Pipeline_Spec_v1.md` (the spec) + `ANCHOR_apparatus.md` (v5, supersedes v4).
 4. **§17.4** — the ignition prompt for S12 (in-chat code block).
 
 ---
 
-*apparatus S11 → S12. 2026-05-27. Grounded against the v4 anchor + the S11 CC probes (export field inventory + thinking-block schema confirmation). The four Stage 0 probes are the only gate between this spec and implementation. Confidence HIGH on the architecture; the `conv_name` carry-through is the single judgment call flagged for explicit S12 ratify.*
+*apparatus S11 → S12. 2026-05-27. Grounded against the v4 anchor + the S11 CC probes (export field inventory + thinking-block schema confirmation) + the pre-commit peer-instance correction on conv-field floor scoping. The five Stage 0 probes are the only gate between this spec and implementation. Confidence HIGH on the architecture; the conv-field inversion was the single judgment call that needed reversing, and that happened before this bundle reached the repo.*
