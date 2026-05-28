@@ -9,12 +9,14 @@ apparatus-scratch/
 prior-art/
 skills-catalog/readmes/
 skills-catalog/chunks/
+skills-catalog/chunks-v0.2/
+skills-catalog/chunks-v0.3/
 skills-catalog/catalog.jsonl
 skills-catalog/crawl.log
 skills-catalog/crawl_progress.json
 skills-catalog/crawl.py
 skills-catalog/chunk_catalog.py
-skills-catalog/
+
 archive/
 
 # Python
