@@ -11,6 +11,16 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-28 — SCDD S5 (JAKE-STACK §2 — Castle Black)
+
+**Scope:** JAKE-STACK §2 (Castle Black standing risks). Stack-only — the ANCHOR_apparatus v8→v9 deltas from this same SCDD session are landed separately by the apparatus/main stream; no anchor line is recorded here from the SCDD side.
+
+**Change(s):**
+- **CB thermal/CPB standing risk → RESOLVED/CLOSED.** The CPB-on + cooled live test (opened SD23 after the fan install dropped the baseline ~10°C) closed PASS. Jake confirmed 5-28: the fans hold the floor low enough that transient spikes still occur but are within tolerance and no longer trigger a panic/shutdown. The PSU-swap power-transient lane and the RAM/MemTest confound are moot unless a panic recurs CPB-on-cooled (none observed). Corroborated by a sustained Go-from-source LXC compile on a dead-idle CB (load 0.00) with zero thermal event.
+- **CB backup strategy → GAP flagged, queued.** CB is now load-bearing host infra (Proxmox + VMs 100/200 + go2rtc + kiosk) and was used as a disposable-LXC test-workload host (CT 999, torn down clean), but has no regular NAS/external backup (ext4 single drive, no mirror). Owner assigned: homelab/day-state session stream (NOT apparatus/SCDD). Candidate approaches noted in-file (vzdump→NAS SMB, or PVE config+VM backup to external HD). Untriaged.
+
+**Why:** SCDD S5 ran the NornicDB round-trip empirical on Castle Black (CT 999, disposable LXC, torn down clean), which both closed the long-running thermal live test by demonstration and surfaced that CB now carries enough real state to need its own backup. Surgical §2 edits only; no other stack facts touched.
+
 ## 2026-05-28 — apparatus S14 (second-export verification + reference pass)
 
 **Scope:** JAKE-STACK §10 (new); Freeze_Pipeline_Spec v3→v4; ANCHOR_apparatus v7→v8.

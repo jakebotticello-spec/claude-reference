@@ -44,7 +44,8 @@ This file describes **WHAT exists.** JAKE-RULES describes **HOW to work with Jak
 · CPB (Core Performance Boost) disabled at runtime via `/sys/devices/system/cpu/cpufreq/boost` — eliminates transient thermal spikes. Persistent via `/etc/rc.local` (or systemd unit).
 
 ### Standing risks
-· **Castle Black panics = thermal/CPB, working conclusion (5/22, holding).** Two hard hangs 5/21 AM (01:42 + ~08:25). NVMe ruled out. Mechanism: CPB transient spikes off a high baseline. **CPB-disable made it stable; SD23 fan install dropped the baseline ~10°C and CPB came back ON this boot — now running as a live test (CPB-on + cooled = the hypothesized-safe condition).** Uptime over coming days decides it: stays up → thermal headroom confirmed, loop closes. Hangs again CPB-on-cooled → power-transient lane → PSU swap (see below), NOT RAM. RAM was never positively evidenced (no MCE logs) — demoted from "top suspect" to optional overnight MemTest confound-killer.
+· **Castle Black panics = thermal/CPB — RESOLVED/CLOSED (5/28, Jake-confirmed).** History: two hard hangs 5/21 AM (01:42 + ~08:25); NVMe ruled out; mechanism was CPB transient spikes off a high baseline. CPB-disable made it stable; the SD23 fan install dropped the baseline ~10°C and CPB came back ON. The live test (CPB-on + cooled = hypothesized-safe) **closed PASS:** Jake confirmed 5/28 the fans hold the floor low enough that the spikes still occur but are now within tolerance and no longer high enough to trigger a panic/shutdown. **The floor was lowered; the spikes are tolerable.** Loop closed — thermal headroom confirmed; the power-transient/PSU-swap lane and the RAM/MemTest confound are both moot unless a panic recurs CPB-on-cooled (none observed). Empirical corroboration 5/28: a sustained Go-from-source compile in an LXC ran on a dead-idle box (load 0.00) during the SCDD round-trip test with zero thermal event.
+· **⚑ CB backup strategy — GAP, queued (5/28).** Castle Black is now load-bearing host infra (Proxmox + VMs 100/200 + go2rtc + kiosk) AND has been used as a disposable-LXC test-workload host (SCDD NornicDB round-trip, CT 999, torn down clean). It currently has **no regular backup to the NAS or an external drive** — ext4 single drive, no mirror (per OS section). Jake flagged 5/28 that CB needs its own scheduled backup now that it carries real state. **Owner: homelab/day-state session stream, NOT apparatus/SCDD.** Candidate approaches to weigh: Proxmox `vzdump` of the VMs to the NAS SMB share (`Jakes Backups`), or PVE-level config + VM backup to an external HD. Untriaged — flagged here so it survives the relay.
 · **Bambu cloud MQTT auth token** has a ~3-month silent expiration clock — no creation date logged historically.
 
 ---
@@ -218,7 +219,9 @@ Rationale: §17.5d infra-sweep. 15 off-target-for-apparatus but in-wheelhouse fi
 
 ---
 
-*Last Update: 5-28-26 by Jake & Chronicler Claude (TWSS SCDD S3 Claude) to add "Homelab/Maker Wishlist" section.
+*Last Update: 5-28-26 by Jake + SCDD S5 Claude. §2 — two surgical edits: (1) CB thermal/CPB standing risk marked RESOLVED/CLOSED — Jake confirmed 5/28 the SD23 fans hold the floor low enough that spikes are within tolerance and no longer trigger panics; live test closed PASS; corroborated by a zero-event LXC compile during the SCDD round-trip test. (2) Added CB-backup-strategy GAP standing risk — CB is now load-bearing host infra + a test-workload host with no regular NAS/external backup (ext4 single drive); owner = homelab/day-state stream, flagged to survive relay. Surgical edits only. Earned by the SCDD NornicDB round-trip empirical (CT 999 on CB, torn down clean).
+
+*Prior: 5-28-26 by Jake & Chronicler Claude (TWSS SCDD S3 Claude) to add "Homelab/Maker Wishlist" section.
 
 
 *Prior: 5-28-26 by apparatus S14 (Jake + orchestrator-Claude). §10 added — the Anthropic conversation export is a multi-file bundle (`conversations.json` + `memories.json` + `users.json` + `projects/`), full-account point-in-time, no delta export; apparatus ingests `conversations.json` only. Earned by the 5-28 second-export pull. Surgical edit only.
