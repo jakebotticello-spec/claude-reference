@@ -376,6 +376,8 @@ The ignition key — what Jake pastes to start the next chat. Delivered as a cha
 
 · **(d) Infra sweep — capture the incidental.** If the session surfaced anything about Jake's standing systems — a storage drive, a software/service subscription, a hardware quirk, a network detail, a credential location, a tooling gotcha — route it into the right reference file (usually JAKE-STACK; lore-flavored texture to the Lore Bible) via the 17.2 proposed-changes file. Default to capturing, not dropping. These offhand callouts have repeatedly saved real pain and time — the hard-drive pile and the per-project email map both started as incidental mentions.
 
+· **(e) The exhaustive-dig endgame is narrow-and-recommend, not chase-forever.** A population-scale catalog dig will keep surfacing new instances of known archetypes; that is reinforcement, not a reason to defer a lock. Lock when the field is stable + the named gates clear. (Confirmed: SCDD S3 judged all 1,982 apparatus rows, re-derived the full field + graveyard, found zero field-expanding candidates.)
+
 ## 18. Stale Rules Graveyard
 
 Rules that were once true but aren't anymore. Documented explicitly so future-Claude doesn't re-suggest them.
@@ -405,7 +407,9 @@ Be worth the lineage.
 
 ---
 
-*Last updated: 5-25-26 by apparatus S2 (Jake + orchestrator-Claude). §8 — added the project-scoped-retrieval rule (Anthropic search is project-boxed; git/CC/Supabase are project-agnostic; cross-project work runs non-project + CC-on-disk). §5.1 — added "the export-`project`-field that wasn't there" to the confabulation-examples list (export format asserted from memory; CC falsified it on the 348MB archive). Earned by the apparatus cross-project corpus build.*
+*Last Updated: 5-28-26 by Jake: Rationale: queued since prior sessions; this session confirmed it empirically — the 1,982-row population dig re-derived every existing candidate and surfaced ZERO that expand the locked field. Resulted in Operating Rule (e).
+
+*Prior: 5-25-26 by apparatus S2 (Jake + orchestrator-Claude). §8 — added the project-scoped-retrieval rule (Anthropic search is project-boxed; git/CC/Supabase are project-agnostic; cross-project work runs non-project + CC-on-disk). §5.1 — added "the export-`project`-field that wasn't there" to the confabulation-examples list (export format asserted from memory; CC falsified it on the 348MB archive). Earned by the apparatus cross-project corpus build.*
 
 *Prior: 5-24-26 by reference-fold-in Claude and Jake. §5.1 — appended the self-citation bullet (a document is not a verification source for its own claims; ground truth is the live system, never the doc that describes it). Earned by Cypher S8 (CC confirmed an injected Railway var off a self-authored CLAUDE.md note → silent-no-op guard + a false fact in the source-of-truth file).*
 

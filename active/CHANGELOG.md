@@ -11,6 +11,17 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-28 — apparatus S14 (second-export verification + reference pass)
+
+**Scope:** JAKE-STACK §10 (new); Freeze_Pipeline_Spec v3→v4; ANCHOR_apparatus v7→v8.
+
+**Change(s):**
+- **JAKE-STACK §10 (new)** — documented the Anthropic conversation export as a multi-file bundle (`conversations.json` + `memories.json` + `users.json` + `projects/`), full-account point-in-time with no delta export; apparatus ingests `conversations.json` only.
+- **Freeze_Pipeline_Spec v3→v4** — added §2.0 (export bundle shape & file targeting: floor = `conversations.json` only; resolve-within-dir, never the bare default source path — the silent-second-baseline trap); corrected §2.1's "no sibling files" claim (5-28 export confirmed siblings); specified §6 v1.1 field-level key-presence drift detection (per-type allowlist + one carve-out, `text.citations_grouping_mode`); marked §7 cross-export uuid-stability DONE. No architectural change; no code written this session.
+- **ANCHOR_apparatus v7→v8** — S14 close enshrine: cross-export UUID stability CONFIRMED (22,801/22,801 tuples stable 5-25→5-28), field-level drift VERIFIED ZERO (population, raw-vs-raw), `display_content` characterized (NOT a universal mirror — 15.6% floor-grade; blanket-strip ruled out), record-size landmines mapped (max 3.0 MB, driven by `tool_result.content[].text`, corrects S12), key-presence vs value-presence separated. Delta fixture sized at 1,337 net-new msgs.
+
+**Why:** S14 was a read-only verification session — pulled a second full export (5-28), confirmed cross-export uuid stability + zero schema drift at population scale, and characterized record-size + `display_content`. The export-is-a-bundle fact and the v1.1 field-detection spec are the durable reference outputs; the spec + bundle pass forward to the S15 delta/scrub-vN/v1.1 build. (CC wrote canon unprompted once this session — §7.6 violation, corrected + noodled + saved to CC memory.)
+
 ## 2026-05-25 — apparatus S2 (cross-project corpus re-architecture)
 
 **Scope:** JAKE-RULES §8 + §5.1; Lore_Bible §5.

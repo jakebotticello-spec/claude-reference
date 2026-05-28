@@ -199,6 +199,30 @@ Jim's side has no split — `jim@ethosteleos.dev` for everything Ordo-related.
 
 ---
 
-*Last updated: 5-24-26 by Jake + SD24 Claude. SD24 folded in: §3 — added VM 100 standing risk: `server.js` V8 worker can hang (not crash), invisible to systemd `Restart=on-failure`; recover via `qm stop/start 100`; external liveness-probe fix queued. Prior 5-24-26 — SD21 + SD22 folded in: §3 — printer cam migrated off ffmpeg/HLS onto go2rtc/WebRTC (server.js v3.3, camera pull removed; new go2rtc subsection; frozen-but-flowing note marked historical/pipeline-retired with go2rtc immunity UNPROVEN; stale ffmpeg systemd + floor-metrics facts scrubbed). §4 — pinned Workhorse `.238`. §5 — added the 3D Recipes Nightly Archiver. §7 — documented the Tapo C111 ~2-pull RTSP ceiling as a standing constraint. Surgical edits only going forward.*
+## 10. Anthropic conversation export (data source)
+
+Requesting a data export from Anthropic yields a **multi-file bundle**, not a single file. Observed shape (5-28-26): `conversations.json` (the full message stream — the apparatus floor input), `memories.json` (model-generated cross-chat memory — *derived*, reworded, not verbatim), `users.json` (account reference), and a `projects/` folder (per-project metadata: name, description, prompt_template, docs).
+
+· The export is **full-account point-in-time** — every request re-exports everything as of that moment; there is no incremental/delta export option.
+· Conversations deleted from the account before an export will not appear in it. A sealed local snapshot is therefore the only durable copy of since-deleted conversations.
+· Apparatus ingests `conversations.json` **only**; the siblings are reference/derived and stay out of the floor. Targeting + drift handling live in apparatus canon (`Freeze_Pipeline_Spec` §2.0).
+
+## 11. Homelab/Maker Wishlist
+Rationale: §17.5d infra-sweep. 15 off-target-for-apparatus but in-wheelhouse finds surfaced in the catalog dig. Several are functional homelab infra (NAS/Tailscale/homelab-control). Full list + URLs in apparatus_delta_menu_S3.xlsx → "Personal Finds" sheet. Highlights to memorialize:
+
+- esp32_nat_router (the original NEED) · esp-mcp · m5-paper-buddy (ESP32/e-ink) — ESP32 lane
+- homebutler (homelab-from-chat, single Go binary) · tailclaude (CC over your Tailscale) — homelab/network, both HIGH
+- mcp-3D-printer-server (Bambu/P1S) · freecad-mcp · blender-open-mcp — 3D/maker lane
+- mcp-server-synology (DS218J lane) · mcp-arr (NAS media) — NAS lane
+- (skip mikrotik-mcp — RouterOS, not the RT-AX55)
+
+---
+
+*Last Update: 5-28-26 by Jake & Chronicler Claude (TWSS SCDD S3 Claude) to add "Homelab/Maker Wishlist" section.
+
+
+*Prior: 5-28-26 by apparatus S14 (Jake + orchestrator-Claude). §10 added — the Anthropic conversation export is a multi-file bundle (`conversations.json` + `memories.json` + `users.json` + `projects/`), full-account point-in-time, no delta export; apparatus ingests `conversations.json` only. Earned by the 5-28 second-export pull. Surgical edit only.
+
+*5-24-26 by Jake + SD24 Claude. SD24 folded in: §3 — added VM 100 standing risk: `server.js` V8 worker can hang (not crash), invisible to systemd `Restart=on-failure`; recover via `qm stop/start 100`; external liveness-probe fix queued. Prior 5-24-26 — SD21 + SD22 folded in: §3 — printer cam migrated off ffmpeg/HLS onto go2rtc/WebRTC (server.js v3.3, camera pull removed; new go2rtc subsection; frozen-but-flowing note marked historical/pipeline-retired with go2rtc immunity UNPROVEN; stale ffmpeg systemd + floor-metrics facts scrubbed). §4 — pinned Workhorse `.238`. §5 — added the 3D Recipes Nightly Archiver. §7 — documented the Tapo C111 ~2-pull RTSP ceiling as a standing constraint. Surgical edits only going forward.*
 
 *Prior: 5-22-26 by Jake. SD20b: corrected TheNightsWatch code versions (server.js v3.2 + index.html), logged the ffmpeg SIGTERM slow-kill + frozen-but-flowing failure mode.*
