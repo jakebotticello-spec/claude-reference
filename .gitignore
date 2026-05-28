@@ -10,7 +10,6 @@ prior-art/
 skills-catalog/readmes/
 skills-catalog/chunks/
 skills-catalog/catalog.jsonl
-skills-catalog/catalog_summary.md
 skills-catalog/crawl.log
 skills-catalog/crawl_progress.json
 skills-catalog/crawl.py
