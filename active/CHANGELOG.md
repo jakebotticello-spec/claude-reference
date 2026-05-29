@@ -11,6 +11,23 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-29 — apparatus S17 (v1.3 delta + raw.json wipe — BUILT, PROVEN, SEALED)
+
+**Scope:** `active/apparatus/apparatus_freeze_pipeline.py` (v1.2 → v1.3, commit `43306fa`, pushed); the floor (new sealed snapshot `delta-2026-05-28-a61498e6` + baseline raw.json backfill-wiped); canon (ANCHOR v10→v11, S17→S18 handoff, this entry — OC-authored, Jake-committed).
+
+**Change(s):**
+- **v1.3 pipeline built — delta runs + raw.json wipe.** Delta ingest via uuid-set-difference (date never a filter; `--export-dir` resolves `conversations.json` within + shape-asserts it — the silent-second-baseline guard); raw.json unlink after Stage 3 verify-PASS (Path A, RESOLVED S15) on both baseline and delta runs. Parameterized the baseline-only assumptions (`type`, `prior_snapshot_id`, `raw_sha256_full` = hash of the filtered slice for deltas vs full source for baseline). New manifest fields `raw_wiped` + `source_export_sha256_full` (separate from `raw_sha256_full`). 6 functions added, 4 modified, 6 unchanged.
+- **Delta SEALED:** `delta-2026-05-28-a61498e6` — 1,368 records (31 headers + 1,337 messages), all 7 post-seal checks PASS. Deterministic snapshot_id held dry-run→real. Stage 3 verify PASS (0 hits / 44,394 strings). Stage 2 scrubbed **38 live creds** (19 postgres, 19 RTSP) from the net-new content. Ledger gained exactly one delta entry (prior_snapshot_id → baseline). The floor now holds 2 snapshots / 24,463 records.
+- **No-duplicate-header rule PROVEN on the floor:** sealed delta is 1,368 lines NOT 1,371 — the 3 empty-baseline convs that gained first messages attached with no new header (fell out of the `seen_conv_headers` check, zero special-casing).
+- **Seen-set authority = sealed records.ndjson** (cache is convenience only); `_build_seen_set` reads `records.ndjson` by name, never globs, never reads raw.json (provenance wall). Hand-computed 1,337 net-new against the sealed baseline before scripting; pipeline reproduced it exactly.
+- **H1 remediated (from `/code-review`):** the baseline `raw.json` (366,879,935 B unscrubbed cred-bearing original) was never wiped — built under v1.2 before the wipe code existed. Verified baseline integrity, wiped via `_wipe_raw`, confirmed records.ndjson still 23,095 after. Working tree now holds zero unscrubbed-cred originals.
+- **NAS cold-copy disposition recorded:** a verbatim baseline original is intentionally retained on NASBackup (.248) for project-lifetime recovery (point-in-time export can't be re-pulled for since-deleted convs) — a known, accepted tradeoff, PENDING REMOVAL at project end. Deliberate carve-out from the S15 "never staged to NAS" line (which targeted automatic staging).
+- **31-vs-34 reconciled, NOT corrected:** canon's "31 wholly-new convs" (S14) is correct (header-based); a transient "34" appeared mid-session from a message-based count (vs 291 message-bearing baseline convs not 294 header-bearing) — the 3-conv gap is the empty-baseline convs getting first messages. Recorded in the ANCHOR history thread; flagged in the handoff DON'T-"fix" list.
+- **Pass-two PREREQUISITE flagged:** `_build_seen_set` reads a hardcoded `scrub-v{SCRUB_VERSION}` — must become per-snapshot max-N resolution before any scrub-vN overlay is generated. Inline `# SEAM (pass-two PREREQUISITE)` in the code + ANCHOR seen-set invariant + handoff.
+- **Review cleanups M1/M3 folded into `43306fa`** (cosmetic, no logic change): M1 delta idempotency check uses in-memory `ledger_entries` instead of re-reading disk; M3 stale v1.1 header comment updated.
+
+**Why:** v1.3 was the live build target since S15 — the delta runs that let the floor accumulate exports without a second full baseline, plus the raw.json wipe that stops unscrubbed cred-bearing originals living immortal on disk. Pass one (delta + wipe) is done and sealed; pass two (scrub-vN overlays + v1.1 field-drift) remains. Every step gated: verify-against-disk → plan-in-OC → dry-run → /code-review → real seal — the discipline that's killed every landmine this project has hit.
+
 ## 2026-05-29 — JAKE-STACK overhaul (dedicated full-stack interrogation session)
 
 **Scope:** JAKE-STACK.md — full-file revision (Jake's express permission; the standing "surgical edits only" rule waived for this one dedicated pass). Two new sections, every existing section reconciled against live ground truth (router config, systemd units on disk, physical device labels, file timestamps).
