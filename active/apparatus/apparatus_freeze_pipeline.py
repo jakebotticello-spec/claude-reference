@@ -1,8 +1,12 @@
-# apparatus_freeze_pipeline.py · v1.2 · apparatus S13 · 2026-05-27 · initial implementation of Stages 1–4 per Freeze_Pipeline_Spec_v2.md
+# apparatus_freeze_pipeline.py · v1.3 · apparatus S17 · 2026-05-29 · delta runs + raw.json wipe
 # v1.1: extracted _parse_and_inspect + _file_sha256; dry-run now exercises drift detection;
-#        stage1_freeze uses shutil.copyfile (no raw bytes held alongside parsed dict)
+#        stage1_freeze uses shutil.copyfile (baseline) / write_bytes (delta, filtered slice)
 # v1.2: moved to active/apparatus/ (canon, not scratch); idempotency check moved after
 #        dry-run early-return so dry-run works correctly when snapshot already exists
+# v1.3: delta runs (uuid-set-difference, seen-set from prior records.ndjson, no-duplicate-
+#        header rule); raw.json wipe after Stage 3 verify-PASS (Path A, canon RESOLVED S15);
+#        --export-dir as primary CLI arg (provenance/second-baseline guard); --baseline guard;
+#        drift detection separated from ingest counts (full export vs delta slice)
 
 import argparse
 import hashlib
@@ -33,6 +37,10 @@ KNOWN_CONTENT_ITEM_TYPES = {'text', 'knowledge', 'local_resource', 'image', 'ima
 # v1.0 detects type-level drift only (block types + tool_result.content[] item types);
 # field-level drift on existing objects is a v1.1 expansion if a drift event surfaces.
 
+# Shape-assert allowlist — S14 confirmed: conv 7 keys, 100% key-present
+CONV_KEYS_EXPECTED = {'uuid', 'name', 'summary', 'created_at', 'updated_at',
+                      'account', 'chat_messages'}
+
 
 # ---------------------------------------------------------------------------
 # Core recursive helpers
@@ -47,14 +55,31 @@ def _file_sha256(path):
     return h.hexdigest()
 
 
-def _parse_and_inspect(src_path):
-    """Parse source JSON, count records, detect schema drift.
-    Returns (raw_data, counts, drift_events). Does not hold raw bytes.
-    Drift warnings surface to stderr here so both dry-run and real-run paths see them.
-    schema-drift.jsonl is written only by stage1_freeze (needs snapshot dir)."""
-    with open(src_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+def _shape_assert(data, source_path):
+    """Assert conversations.json is a JSON list with expected conv-level keys.
+    A mismatch is a human-review signal — renamed field, added sibling, shape change.
+    STOP with a clear error; do NOT auto-handle."""
+    if not isinstance(data, list):
+        sys.exit(
+            f"ERROR: shape-assert FAILED — {source_path} parsed as {type(data).__name__}, "
+            f"expected a JSON list. Human review required."
+        )
+    if data:
+        observed = set(data[0].keys())
+        missing = CONV_KEYS_EXPECTED - observed
+        extra   = observed - CONV_KEYS_EXPECTED
+        if missing or extra:
+            sys.exit(
+                f"ERROR: shape-assert FAILED — conv[0] key mismatch. "
+                f"missing={sorted(missing)} extra={sorted(extra)}. Human review required."
+            )
+    print(f"[Shape] conversations.json: {len(data)} convs, key shape OK")
 
+
+def _inspect_data(data):
+    """Count records and detect schema drift on loaded conv data.
+    Drift warnings surface to stderr. Returns (conv_count, message_count,
+    content_block_count, drift_events). Does no file I/O."""
     conv_count = len(data)
     message_count = sum(len(conv.get('chat_messages', [])) for conv in data)
     content_block_count = sum(
@@ -63,7 +88,6 @@ def _parse_and_inspect(src_path):
         for msg in conv.get('chat_messages', [])
     )
 
-    # Schema-drift detection — type-level only in v1.0 (see constants comment above)
     drift_events = []
     for conv in data:
         for msg in conv.get('chat_messages', []):
@@ -95,6 +119,18 @@ def _parse_and_inspect(src_path):
                                 f"type '{itype}' conv={conv['uuid'][:8]} msg={msg['uuid'][:8]}\n"
                             )
 
+    return conv_count, message_count, content_block_count, drift_events
+
+
+def _parse_and_inspect(src_path):
+    """Parse source JSON, assert shape, count records, detect schema drift.
+    Returns (raw_data, counts, drift_events). Does not hold raw bytes.
+    Drift warnings surface to stderr here so both dry-run and real-run paths see them.
+    schema-drift.jsonl is written only by stage1_freeze (needs snapshot dir)."""
+    with open(src_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    _shape_assert(data, src_path)
+    conv_count, message_count, content_block_count, drift_events = _inspect_data(data)
     return data, (conv_count, message_count, content_block_count), drift_events
 
 
@@ -154,19 +190,112 @@ def _verify_walk(obj, hits, counters):
 
 
 # ---------------------------------------------------------------------------
+# Delta helpers
+# ---------------------------------------------------------------------------
+
+def _read_ledger(snapshots_base):
+    """Read ledger.jsonl; return list of entry dicts. Empty list if absent/empty."""
+    ledger_path = snapshots_base / 'ledger.jsonl'
+    if not ledger_path.exists():
+        return []
+    entries = []
+    with open(ledger_path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                entries.append(json.loads(line))
+    return entries
+
+
+def _build_seen_set(snapshots_base, ledger_entries):
+    """Build the seen-set from all prior snapshots' records.ndjson.
+    Returns (seen_pairs: set of (conv_uuid, msg_uuid),
+             seen_conv_headers: set of conv_uuid with a header in any prior snapshot).
+    The records.ndjson is the authority — never reads raw.json or globs siblings."""
+    seen_pairs = set()
+    seen_conv_headers = set()
+    for entry in ledger_entries:
+        sid = entry['snapshot_id']
+        # SEAM (pass-two PREREQUISITE): replace SCRUB_VERSION constant with a per-snapshot
+        # max-N glob once scrub-vN overlays land — this constant silently reads the wrong
+        # overlay the moment a snapshot has scrub-v2+. Pass-two must fix this before
+        # generating any scrub-vN snapshot.
+        records_path = snapshots_base / sid / f'scrub-v{SCRUB_VERSION}' / 'records.ndjson'
+        if not records_path.exists():
+            sys.exit(
+                f"ERROR: seen-set build failed — records.ndjson not found at {records_path}. "
+                f"Data integrity failure; cannot proceed with incomplete seen-set."
+            )
+        print(f"[Seen-set] Reading: {records_path}")
+        with open(records_path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get('record_type') == 'conversation_header':
+                    seen_conv_headers.add(rec['conv_uuid'])
+                else:
+                    seen_pairs.add((rec['conv_uuid'], rec['msg_uuid']))
+    return seen_pairs, seen_conv_headers
+
+
+def _filter_delta(full_data, new_pairs):
+    """Return a filtered conv list for the delta raw.json: only convs with net-new messages,
+    with chat_messages trimmed to only the new ones. Conv-level metadata carried verbatim
+    (Stage 2 scrubs it; Stage 4 drops name/summary per invariant 5.4)."""
+    result = []
+    for conv in full_data:
+        cu = conv['uuid']
+        new_msgs = [m for m in conv.get('chat_messages', [])
+                    if (cu, m['uuid']) in new_pairs]
+        if not new_msgs:
+            continue
+        filtered = {k: v for k, v in conv.items() if k != 'chat_messages'}
+        filtered['chat_messages'] = new_msgs
+        result.append(filtered)
+    return result
+
+
+def _wipe_raw(snapshot_dir):
+    """Unlink raw.json (Path A, canon RESOLVED S15). Hard-gated: caller must only invoke
+    after Stage 3 PASS + Stage 4 complete. Updates manifest.json raw_wiped=True.
+    Ledger.jsonl is NOT updated (append-only; manifest.json is the living per-snapshot record)."""
+    raw_path = snapshot_dir / 'raw.json'
+    raw_size = raw_path.stat().st_size
+    os.chmod(raw_path, 0o666)   # Windows requires writable before unlink on a 0o444 file
+    os.unlink(raw_path)
+    manifest_path = snapshot_dir / 'manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    manifest['raw_wiped'] = True
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+    print(f"[Wipe] raw.json unlinked ({raw_size:,} bytes); manifest updated raw_wiped=True")
+
+
+# ---------------------------------------------------------------------------
 # Stage functions
 # ---------------------------------------------------------------------------
 
-def stage1_freeze(source_path, source_sha256, snapshot_id, snapshot_dir,
+def stage1_freeze(source_path, source_export_sha256, snapshot_id, snapshot_dir,
                   conv_count, message_count, content_block_count,
-                  snapshots_base, drift_events):
-    """Freeze: create snapshot dir, write sealed raw.json, manifest.json, append ledger.
-    Uses shutil.copyfile for byte-verbatim source→raw.json (no re-serialization)."""
+                  snapshots_base, drift_events,
+                  run_type='baseline', prior_snapshot_id=None,
+                  raw_bytes=None, raw_sha256_full=None):
+    """Freeze: create snapshot dir, write raw.json, manifest.json, append ledger.
+    Baseline: shutil.copyfile from source (byte-verbatim). raw_sha256_full = source hash.
+    Delta: write raw_bytes (the filtered slice) directly. raw_sha256_full passed in."""
     print(f"[Stage 1] Creating snapshot: {snapshot_id}")
     snapshot_dir.mkdir(parents=True, exist_ok=False)
 
     raw_path = snapshot_dir / 'raw.json'
-    shutil.copyfile(source_path, raw_path)  # byte-verbatim; re-reads source from disk
+    if raw_bytes is None:
+        # Baseline: byte-verbatim copy; re-reads source from disk (no large bytes in memory)
+        shutil.copyfile(source_path, raw_path)
+        _raw_sha256_full = source_export_sha256
+    else:
+        # Delta: write the pre-serialized filtered slice
+        raw_path.write_bytes(raw_bytes)
+        _raw_sha256_full = raw_sha256_full  # pre-computed by caller from the same bytes
     os.chmod(raw_path, 0o444)               # sealed read-only — invariant 5.1
     print(f"[Stage 1] raw.json written ({raw_path.stat().st_size:,} bytes) — sealed read-only")
 
@@ -180,18 +309,19 @@ def stage1_freeze(source_path, source_sha256, snapshot_id, snapshot_dir,
 
     source_mtime = os.path.getmtime(source_path)
     manifest = {
-        'snapshot_id': snapshot_id,
-        'type': 'baseline',
-        'source_export_path': str(source_path.resolve()),
-        'source_export_mtime': datetime.fromtimestamp(source_mtime, tz=timezone.utc).isoformat(),
-        'source_export_sha256_full': source_sha256,
-        'raw_sha256_full': source_sha256,  # baseline: verbatim copy, same hash
-        'raw_byte_size': raw_path.stat().st_size,
-        'conv_count': conv_count,
-        'message_count': message_count,
-        'content_block_count': content_block_count,
-        'prior_snapshot_id': None,
-        'frozen_at': datetime.now(tz=timezone.utc).isoformat(),
+        'snapshot_id':              snapshot_id,
+        'type':                     run_type,
+        'source_export_path':       str(source_path.resolve()),
+        'source_export_mtime':      datetime.fromtimestamp(source_mtime, tz=timezone.utc).isoformat(),
+        'source_export_sha256_full': source_export_sha256,
+        'raw_sha256_full':          _raw_sha256_full,
+        'raw_byte_size':            raw_path.stat().st_size,
+        'raw_wiped':                False,   # updated to True by _wipe_raw after Stage 4
+        'conv_count':               conv_count,
+        'message_count':            message_count,
+        'content_block_count':      content_block_count,
+        'prior_snapshot_id':        prior_snapshot_id,
+        'frozen_at':                datetime.now(tz=timezone.utc).isoformat(),
     }
     (snapshot_dir / 'manifest.json').write_text(
         json.dumps(manifest, indent=2), encoding='utf-8'
@@ -295,9 +425,14 @@ def stage3_verify(snapshot_dir, scrubbed_data, snapshot_id):
     return False
 
 
-def stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id):
-    """Ingest: write records.ndjson (conv headers + message records). Seal scrub-vN/."""
-    print(f"[Stage 4] Ingesting {len(scrubbed_data)} conversations...")
+def stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id, seen_conv_headers=None):
+    """Ingest: write records.ndjson (conv headers + message records). Seal scrub-vN/.
+    seen_conv_headers: set of conv_uuids that already have a header in a prior snapshot.
+    None/empty = baseline (all convs get a header). Delta: existing convs skip the header
+    but always get their new message records."""
+    seen_conv_headers = seen_conv_headers or set()
+    run_label = 'delta' if seen_conv_headers else 'baseline'
+    print(f"[Stage 4] Ingesting {len(scrubbed_data)} conversations ({run_label})...")
     scrub_dir = snapshot_dir / f'scrub-v{SCRUB_VERSION}'
 
     sorted_convs = sorted(scrubbed_data, key=lambda c: c['created_at'])
@@ -307,39 +442,43 @@ def stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id):
     with open(scrub_dir / 'records.ndjson', 'w', encoding='utf-8') as f:
         for conv in sorted_convs:
             msgs = conv.get('chat_messages', [])
+            conv_uuid = conv['uuid']
 
-            root_count = sum(1 for m in msgs if m['parent_message_uuid'] == ROOT_SENTINEL)
-            multi_root = root_count > 1
+            if conv_uuid not in seen_conv_headers:
+                # New conv — write a conversation_header record
+                root_count = sum(1 for m in msgs if m['parent_message_uuid'] == ROOT_SENTINEL)
+                multi_root = root_count > 1
 
-            parent_child_counts: dict = {}
-            for m in msgs:
-                p = m['parent_message_uuid']
-                if p != ROOT_SENTINEL:
-                    parent_child_counts[p] = parent_child_counts.get(p, 0) + 1
-            has_branches = any(c >= 2 for c in parent_child_counts.values())
+                parent_child_counts: dict = {}
+                for m in msgs:
+                    p = m['parent_message_uuid']
+                    if p != ROOT_SENTINEL:
+                        parent_child_counts[p] = parent_child_counts.get(p, 0) + 1
+                has_branches = any(c >= 2 for c in parent_child_counts.values())
 
-            # Conversation header — name and summary intentionally excluded (invariant 5.4 / D5)
-            header = {
-                'record_type':   'conversation_header',
-                'snapshot_id':   snapshot_id,
-                'scrub_version': SCRUB_VERSION,
-                'conv_uuid':     conv['uuid'],
-                'created_at':    conv['created_at'],
-                'updated_at':    conv['updated_at'],
-                'account_uuid':  conv['account']['uuid'],
-                'message_count': len(msgs),
-                'has_branches':  has_branches,
-                'multi_root':    multi_root,
-            }
-            f.write(json.dumps(header, ensure_ascii=False) + '\n')
-            header_count += 1
+                # name and summary intentionally excluded (invariant 5.4 / D5)
+                header = {
+                    'record_type':   'conversation_header',
+                    'snapshot_id':   snapshot_id,
+                    'scrub_version': SCRUB_VERSION,
+                    'conv_uuid':     conv_uuid,
+                    'created_at':    conv['created_at'],
+                    'updated_at':    conv['updated_at'],
+                    'account_uuid':  conv['account']['uuid'],
+                    'message_count': len(msgs),
+                    'has_branches':  has_branches,
+                    'multi_root':    multi_root,
+                }
+                f.write(json.dumps(header, ensure_ascii=False) + '\n')
+                header_count += 1
 
+            # Always write message records — all are net-new by construction in delta
             for msg in sorted(msgs, key=lambda m: m['created_at']):
                 # conv_name and conv_summary intentionally absent — invariant 5.4 / D5
                 record = {
                     'snapshot_id':         snapshot_id,
                     'scrub_version':       SCRUB_VERSION,
-                    'conv_uuid':           conv['uuid'],
+                    'conv_uuid':           conv_uuid,
                     'msg_uuid':            msg['uuid'],
                     'parent_message_uuid': msg['parent_message_uuid'],
                     'sender':              msg['sender'],
@@ -370,80 +509,242 @@ def stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id):
 def main():
     p = argparse.ArgumentParser(description='apparatus freeze pipeline — Stages 1–4')
     p.add_argument(
+        '--export-dir',
+        help='Export directory containing conversations.json (primary; use for all delta runs '
+             'and new baselines). Pipeline resolves conversations.json within this dir.',
+    )
+    p.add_argument(
         '--source',
-        default='apparatus-archive/conversations.json',
-        help='Path to conversations.json export (default: apparatus-archive/conversations.json)',
+        help='Path to conversations.json directly (legacy back-compat for the original '
+             'baseline invocation). --export-dir wins if both are given.',
     )
     p.add_argument(
         '--dry-run', action='store_true',
         help='Parse + inspect for drift + report counts; write nothing',
     )
+    p.add_argument(
+        '--baseline', action='store_true',
+        help='Force baseline mode. Refuses if ledger already contains a baseline '
+             '(guard against silently minting a second baseline).',
+    )
     args = p.parse_args()
 
-    source_path = Path(args.source)
+    # --- Resolve source path + snapshots_base ---
+    if args.export_dir:
+        export_dir = Path(args.export_dir)
+        source_path = export_dir / 'conversations.json'
+        snapshots_base = export_dir.parent / 'snapshots'
+    elif args.source:
+        source_path = Path(args.source)
+        snapshots_base = source_path.parent / 'snapshots'
+    else:
+        sys.exit("ERROR: must supply --export-dir DIR or --source FILE")
+
     if not source_path.exists():
-        sys.exit(f"ERROR: source not found: {source_path}")
+        sys.exit(f"ERROR: conversations.json not found: {source_path}")
 
-    snapshots_base = source_path.parent / 'snapshots'
-
-    # Streaming sha256 — no raw bytes held in memory alongside parsed dict
+    # --- Hash source (always the full export — used as source_export_sha256_full) ---
     print(f"Hashing {source_path} ({source_path.stat().st_size / 1024 / 1024:.1f} MB)...")
     source_sha256 = _file_sha256(source_path)
     source_mtime = os.path.getmtime(source_path)
-    # UTC for mtime date — deterministic across timezone changes
     mtime_date = datetime.fromtimestamp(source_mtime, tz=timezone.utc).strftime('%Y-%m-%d')
-    snapshot_id = f"baseline-{mtime_date}-{source_sha256[:8]}"
-    snapshot_dir = snapshots_base / snapshot_id
 
-    # Parse, count, detect drift — drift warnings surface to stderr here
-    print(f"Parsing JSON...")
-    data, (conv_count, message_count, content_block_count), drift_events = \
-        _parse_and_inspect(source_path)
+    # --- Run-type detection ---
+    ledger_entries = _read_ledger(snapshots_base)
+    if args.baseline:
+        if any(e.get('type') == 'baseline' for e in ledger_entries):
+            sys.exit(
+                "ERROR: --baseline refused — ledger already contains a baseline snapshot. "
+                "To ingest new exports use delta mode (--export-dir without --baseline)."
+            )
+        run_type = 'baseline'
+    elif not ledger_entries:
+        run_type = 'baseline'
+    else:
+        run_type = 'delta'
 
-    print(f"Snapshot ID  : {snapshot_id}")
-    print(f"Counts       : {conv_count} convs / {message_count} msgs / "
-          f"{content_block_count} content blocks")
-    print(f"Schema drift : {len(drift_events)} events"
-          + (" (see stderr warnings above)" if drift_events else ""))
+    print(f"Run type: {run_type}")
 
-    if args.dry_run:
+    # =========================================================================
+    # BASELINE PATH
+    # =========================================================================
+    if run_type == 'baseline':
+        snapshot_id = f"baseline-{mtime_date}-{source_sha256[:8]}"
+        snapshot_dir = snapshots_base / snapshot_id
+
+        print(f"Parsing JSON...")
+        data, (conv_count, message_count, content_block_count), drift_events = \
+            _parse_and_inspect(source_path)
+
+        print(f"Snapshot ID  : {snapshot_id}")
+        print(f"Counts       : {conv_count} convs / {message_count} msgs / "
+              f"{content_block_count} content blocks")
+        print(f"Schema drift : {len(drift_events)} events"
+              + (" (see stderr warnings above)" if drift_events else ""))
+
+        if args.dry_run:
+            if snapshot_dir.exists():
+                print(f"NOTE: snapshot already exists — real run would refuse (invariant 5.2)")
+            print(f"\n[DRY-RUN] Snapshot dir would be: {snapshot_dir}")
+            print("[DRY-RUN] No files written.")
+            return
+
+        # Idempotency check — invariant 5.2: sealed snapshots never overwritten
         if snapshot_dir.exists():
-            print(f"NOTE: snapshot already exists — real run would refuse (invariant 5.2)")
-        print(f"\n[DRY-RUN] Snapshot dir would be: {snapshot_dir}")
-        print("[DRY-RUN] No files written.")
-        return
+            sys.exit(
+                f"ERROR: snapshot {snapshot_id} already exists at {snapshot_dir} — "
+                f"refusing overwrite (invariant 5.2)"
+            )
+        ledger_path = snapshots_base / 'ledger.jsonl'
+        if ledger_path.exists():
+            with open(ledger_path, encoding='utf-8') as lf:
+                for line in lf:
+                    if line.strip() and json.loads(line).get('snapshot_id') == snapshot_id:
+                        sys.exit(
+                            f"ERROR: snapshot {snapshot_id} already in ledger — "
+                            f"refusing re-run (invariant 5.2)"
+                        )
 
-    # Idempotency check — invariant 5.2: sealed snapshots never overwritten
-    # (after dry-run exit: dry-run writes nothing so no overwrite risk)
-    if snapshot_dir.exists():
-        sys.exit(
-            f"ERROR: snapshot {snapshot_id} already exists at {snapshot_dir} — "
-            f"refusing overwrite (invariant 5.2)"
-        )
-    if (snapshots_base / 'ledger.jsonl').exists():
-        with open(snapshots_base / 'ledger.jsonl', encoding='utf-8') as lf:
-            for line in lf:
-                if line.strip() and json.loads(line).get('snapshot_id') == snapshot_id:
-                    sys.exit(
-                        f"ERROR: snapshot {snapshot_id} already in ledger — "
-                        f"refusing re-run (invariant 5.2)"
-                    )
-
-    stage1_freeze(
-        source_path, source_sha256, snapshot_id, snapshot_dir,
-        conv_count, message_count, content_block_count,
-        snapshots_base, drift_events,
-    )
-
-    scrubbed_data = stage2_scrub(snapshot_dir, data, snapshot_id)
-
-    if not stage3_verify(snapshot_dir, scrubbed_data, snapshot_id):
-        sys.exit(
-            f"ERROR: Stage 3 verify-clean FAILED — Stage 4 halted. "
-            f"See {snapshot_dir / f'scrub-v{SCRUB_VERSION}' / 'verify.log'}"
+        stage1_freeze(
+            source_path, source_sha256, snapshot_id, snapshot_dir,
+            conv_count, message_count, content_block_count,
+            snapshots_base, drift_events,
+            run_type='baseline',
         )
 
-    stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id)
+        scrubbed_data = stage2_scrub(snapshot_dir, data, snapshot_id)
+
+        if not stage3_verify(snapshot_dir, scrubbed_data, snapshot_id):
+            sys.exit(
+                f"ERROR: Stage 3 verify-clean FAILED — Stage 4 halted. raw.json survives. "
+                f"See {snapshot_dir / f'scrub-v{SCRUB_VERSION}' / 'verify.log'}"
+            )
+
+        stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id)
+        _wipe_raw(snapshot_dir)
+
+    # =========================================================================
+    # DELTA PATH
+    # =========================================================================
+    else:
+        if not ledger_entries:
+            sys.exit("ERROR: delta mode requires at least one prior snapshot in ledger — none found")
+
+        seen_pairs, seen_conv_headers = _build_seen_set(snapshots_base, ledger_entries)
+        print(f"[Seen-set] {len(seen_pairs):,} (conv,msg) pairs / "
+              f"{len(seen_conv_headers)} conv headers from {len(ledger_entries)} prior snapshot(s)")
+
+        print(f"Loading export JSON...")
+        with open(source_path, 'r', encoding='utf-8') as f:
+            full_data = json.load(f)
+        _shape_assert(full_data, source_path)
+
+        # Drift detection on the FULL export — catches schema changes on any conv,
+        # not just convs with net-new messages. A change on an untouched conv would be
+        # invisible if we only inspected the slice. Counts here are for reporting only.
+        full_conv_count, full_msg_count, full_block_count, drift_events = _inspect_data(full_data)
+        print(f"Drift detection (full export): {full_conv_count} convs / {full_msg_count} msgs / "
+              f"{full_block_count} blocks / {len(drift_events)} drift event(s)"
+              + (" (see stderr warnings above)" if drift_events else ""))
+
+        # UUID-set-difference — date NEVER a filter, hint, or proxy (invariant 5.9)
+        export_pairs = {
+            (c['uuid'], m['uuid'])
+            for c in full_data
+            for m in c.get('chat_messages', [])
+        }
+        new_pairs = export_pairs - seen_pairs
+        vanished  = seen_pairs - export_pairs
+
+        if vanished:
+            warn_msg = (
+                f"{'WARN' if args.dry_run else 'ERROR'}: {len(vanished)} baseline (conv,msg) "
+                f"pair(s) are missing from this export — cross-export UUID instability "
+                f"suspected or wrong/corrupt export."
+            )
+            if not args.dry_run:
+                sys.exit(
+                    f"{warn_msg} Real run refused — sealing a delta against this is immortal. "
+                    f"Investigate before proceeding."
+                )
+            print(warn_msg)
+
+        delta_data = _filter_delta(full_data, new_pairs)
+
+        # Ingest counts — what we're actually sealing (distinct from the full-export drift scan)
+        delta_conv_count  = len(delta_data)
+        delta_msg_count   = sum(len(c.get('chat_messages', [])) for c in delta_data)
+        delta_block_count = sum(
+            len(m.get('content', []))
+            for c in delta_data
+            for m in c.get('chat_messages', [])
+        )
+
+        # Delta breakdown: convs getting a new header vs convs getting only message records
+        brand_new_conv_uuids = {c for c, m in new_pairs} - seen_conv_headers
+        append_conv_uuids    = {c for c, m in new_pairs} & seen_conv_headers
+        brand_new_msgs = sum(1 for c, m in new_pairs if c in brand_new_conv_uuids)
+        append_msgs    = sum(1 for c, m in new_pairs if c in append_conv_uuids)
+
+        # Serialize + hash the filtered slice — raw_sha256_full ≠ source_sha256 for delta
+        raw_bytes  = json.dumps(delta_data, ensure_ascii=False).encode('utf-8')
+        raw_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+        snapshot_id      = f"delta-{mtime_date}-{raw_sha256[:8]}"
+        snapshot_dir     = snapshots_base / snapshot_id
+        prior_snapshot_id = ledger_entries[-1]['snapshot_id']
+
+        print(f"Snapshot ID  : {snapshot_id}")
+        print(f"Source sha256 (full export) : {source_sha256}")
+        print(f"Raw sha256   (delta slice)  : {raw_sha256}")
+        print(f"Delta (to seal): {delta_conv_count} convs / {delta_msg_count} msgs / "
+              f"{delta_block_count} blocks")
+        print(f"Net-new messages  : {len(new_pairs):,}")
+        print(f"  brand-new convs : {len(brand_new_conv_uuids)} convs / {brand_new_msgs} msgs "
+              f"(will write header)")
+        print(f"  existing convs  : {len(append_conv_uuids)} convs / {append_msgs} msgs "
+              f"(no new header)")
+        print(f"  vanished pairs  : {len(vanished)}")
+        print(f"Schema drift : {len(drift_events)} event(s)"
+              + (" (see stderr warnings above)" if drift_events else ""))
+
+        if args.dry_run:
+            if snapshot_dir.exists():
+                print(f"NOTE: snapshot already exists — real run would refuse (invariant 5.2)")
+            print(f"\n[DRY-RUN] Snapshot dir would be: {snapshot_dir}")
+            print("[DRY-RUN] No files written.")
+            return
+
+        # Idempotency check
+        if snapshot_dir.exists():
+            sys.exit(
+                f"ERROR: snapshot {snapshot_id} already exists at {snapshot_dir} — "
+                f"refusing overwrite (invariant 5.2)"
+            )
+        if any(e.get('snapshot_id') == snapshot_id for e in ledger_entries):
+            sys.exit(
+                f"ERROR: snapshot {snapshot_id} already in ledger — "
+                f"refusing re-run (invariant 5.2)"
+            )
+
+        stage1_freeze(
+            source_path, source_sha256, snapshot_id, snapshot_dir,
+            delta_conv_count, delta_msg_count, delta_block_count,
+            snapshots_base, drift_events,
+            run_type='delta', prior_snapshot_id=prior_snapshot_id,
+            raw_bytes=raw_bytes, raw_sha256_full=raw_sha256,
+        )
+
+        scrubbed_data = stage2_scrub(snapshot_dir, delta_data, snapshot_id)
+
+        if not stage3_verify(snapshot_dir, scrubbed_data, snapshot_id):
+            sys.exit(
+                f"ERROR: Stage 3 verify-clean FAILED — Stage 4 halted. raw.json survives. "
+                f"See {snapshot_dir / f'scrub-v{SCRUB_VERSION}' / 'verify.log'}"
+            )
+
+        stage4_ingest(snapshot_dir, scrubbed_data, snapshot_id,
+                      seen_conv_headers=seen_conv_headers)
+        _wipe_raw(snapshot_dir)
 
     print(f"\nDone. Snapshot : {snapshot_id}")
     print(f"Location       : {snapshot_dir}")
