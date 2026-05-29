@@ -16,6 +16,7 @@ skills-catalog/crawl.log
 skills-catalog/crawl_progress.json
 skills-catalog/crawl.py
 skills-catalog/chunk_catalog.py
+docs/reviews/
 
 archive/
 
