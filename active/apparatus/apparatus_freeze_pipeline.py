@@ -1,4 +1,4 @@
-# apparatus_freeze_pipeline.py · v1.4 · apparatus S18 · 2026-05-30 · field-level drift detection
+# apparatus_freeze_pipeline.py · v1.5 · apparatus S19 · 2026-05-30 · scrub-version seam fix
 # v1.1: extracted _parse_and_inspect + _file_sha256; dry-run now exercises drift detection;
 #        stage1_freeze uses shutil.copyfile (baseline) / write_bytes (delta, filtered slice)
 # v1.2: moved to active/apparatus/ (canon, not scratch); idempotency check moved after
@@ -10,6 +10,8 @@
 # v1.4: field-level key-presence drift detection (v1.1 detector layer); per-object-type
 #        allowlists for conv, message, all 5 block types, all 5 content-item types; optional-
 #        key carve-out for text.citations_grouping_mode; warn-not-stop, same drift_events sink
+# v1.5: scrub-version seam fix in _build_seen_set — per-snapshot max-N glob replaces
+#        hardcoded SCRUB_VERSION; no behavioral change on current floor (scrub-v1 only)
 
 import argparse
 import hashlib
@@ -359,11 +361,19 @@ def _build_seen_set(snapshots_base, ledger_entries):
     seen_conv_headers = set()
     for entry in ledger_entries:
         sid = entry['snapshot_id']
-        # SEAM (pass-two PREREQUISITE): replace SCRUB_VERSION constant with a per-snapshot
-        # max-N glob once scrub-vN overlays land — this constant silently reads the wrong
-        # overlay the moment a snapshot has scrub-v2+. Pass-two must fix this before
-        # generating any scrub-vN snapshot.
-        records_path = snapshots_base / sid / f'scrub-v{SCRUB_VERSION}' / 'records.ndjson'
+        # Resolve the highest-numbered scrub-vN overlay for this prior snapshot.
+        _scrub_dirs = sorted(
+            [p for p in (snapshots_base / sid).iterdir()
+             if p.is_dir() and re.fullmatch(r'scrub-v\d+', p.name)],
+            key=lambda p: int(p.name[len('scrub-v'):]),
+        )
+        if not _scrub_dirs:
+            sys.exit(
+                f"ERROR: seen-set build failed — no scrub-v* overlay found under "
+                f"{snapshots_base / sid}. "
+                f"Data integrity failure; cannot proceed with incomplete seen-set."
+            )
+        records_path = _scrub_dirs[-1] / 'records.ndjson'
         if not records_path.exists():
             sys.exit(
                 f"ERROR: seen-set build failed — records.ndjson not found at {records_path}. "
