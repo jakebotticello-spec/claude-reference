@@ -11,6 +11,18 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-30 — apparatus S19 (scrub-version seam fixed + scrub-vN overlay contract ratified)
+
+**Scope:** `active/apparatus/apparatus_freeze_pipeline.py` (v1.4 → v1.5, commit `98e9cef`, pushed); canon (ANCHOR v12→v13 + this entry — OC-authored, Jake-committed). The floor was NOT touched — still 2 snapshots / 24,463 records, both scrub-v1.
+
+**Change(s):**
+- **Pipeline v1.5 — scrub-version seam fixed in `_build_seen_set`.** Replaced the hardcoded `scrub-v{SCRUB_VERSION}` read path with a per-snapshot max-N glob (`iterdir()` + `re.fullmatch(r'scrub-v\d+')`, integer-keyed sort, `[-1]`). Closes the silent-wrong-read risk: the moment a prior snapshot carried scrub-v2+, the old constant would read the wrong (stale) overlay. Hard `sys.exit` if no `scrub-v*` overlay exists (floor-integrity failure — stop, not warn; Jake-approved intent call). Write-side `SCRUB_VERSION` uses (Stage 2/3/4) unchanged — read path only.
+- **Proven three ways.** (1) Measured no-op on the v1-only floor: pre-fix and post-fix `_build_seen_set` return set-equal seen-sets (24,138 pairs / 325 headers), content-equal not just cardinality. (2) Synthetic fixture: max-N picks scrub-v2 over v1 by content, picks v10 over v2 (true integer sort — lexical would wrongly pick v2), ignores non-conformant dirs (`scrub-v2-backup`, `scrub-vX`). (3) `/code-review` clean. All fixture/proof work in `apparatus-scratch/` (gitignored); real floor never touched.
+- **ANCHOR v12 → v13 — scrub-vN overlay contract RATIFIED** (Jake, 2026-05-30), authored as canon prose BEFORE any overlay code. Three invariants: (1) **tighten-only** — raw is wiped/gone, so an overlay re-scrubs the prior version's *scrubbed* output, can only redact MORE never less, and can never recover redacted text; (2) **full-restated-standalone** — each scrub-vN is a complete, directly-hashable records.ndjson (not a delta), preserving the D9 read-don't-reconstruct reframe; (3) **accrete-forever** — superseded overlays are never removed (the S16 `floor_immutable_guard()` forbids the DELETE mechanically, and the prior version is the scrubber's own audit trail). Plus the may/must-not boundary and the sha-unchanged verification gate (b-ladder rung 6).
+- **De-duped the v8 enshrine tail** in ANCHOR — a pre-existing copy-paste doubling of the v8-block body (logged S18, done this session as its own dedicated pass, not folded into a content edit).
+
+**Why:** Pass two (b) — scrub-vN overlays — opens on the scrub-version seam (a hard prerequisite, dormant-but-dangerous because the floor is currently scrub-v1-only). Seam fixed + proven from both directions (doesn't break old behavior / delivers new behavior), then the overlay contract locked in words before any overlay code, because on an append-only immortal floor a wrong overlay relationship writes permanent bad rows. Seam (rungs 1-3) + contract (rung 4) done; next is minting the first overlay tiny (rung 5, ratify-small-before-scale).
+
 ## 2026-05-30 — apparatus S18 (v1.1 field-level key-presence drift detection — BUILT, PROVEN, SEALED)
 
 **Scope:** `active/apparatus/apparatus_freeze_pipeline.py` (v1.3 → v1.4, commit `b5be049`, pushed); canon (ANCHOR v11→v12, S18→S19 handoff, this entry — OC-authored, Jake-committed). The floor was NOT touched (the build reads exports, never mutates the floor — still 2 snapshots / 24,463 records).
