@@ -1,4 +1,4 @@
-# apparatus_freeze_pipeline.py · v1.3 · apparatus S17 · 2026-05-29 · delta runs + raw.json wipe
+# apparatus_freeze_pipeline.py · v1.4 · apparatus S18 · 2026-05-30 · field-level drift detection
 # v1.1: extracted _parse_and_inspect + _file_sha256; dry-run now exercises drift detection;
 #        stage1_freeze uses shutil.copyfile (baseline) / write_bytes (delta, filtered slice)
 # v1.2: moved to active/apparatus/ (canon, not scratch); idempotency check moved after
@@ -7,6 +7,9 @@
 #        header rule); raw.json wipe after Stage 3 verify-PASS (Path A, canon RESOLVED S15);
 #        --export-dir as primary CLI arg (provenance/second-baseline guard); --baseline guard;
 #        drift detection separated from ingest counts (full export vs delta slice)
+# v1.4: field-level key-presence drift detection (v1.1 detector layer); per-object-type
+#        allowlists for conv, message, all 5 block types, all 5 content-item types; optional-
+#        key carve-out for text.citations_grouping_mode; warn-not-stop, same drift_events sink
 
 import argparse
 import hashlib
@@ -34,12 +37,104 @@ PATTERNS = [
 # Population-confirmed at S12 (5 block types, 67,275 blocks; 5 content-item types)
 KNOWN_BLOCK_TYPES = {'text', 'thinking', 'tool_use', 'tool_result', 'token_budget'}
 KNOWN_CONTENT_ITEM_TYPES = {'text', 'knowledge', 'local_resource', 'image', 'image_gallery'}
-# v1.0 detects type-level drift only (block types + tool_result.content[] item types);
-# field-level drift on existing objects is a v1.1 expansion if a drift event surfaces.
+# v1.0: type-level drift (unknown block/item types); v1.1: field-level drift (key-set allowlists)
 
 # Shape-assert allowlist — S14 confirmed: conv 7 keys, 100% key-present
-CONV_KEYS_EXPECTED = {'uuid', 'name', 'summary', 'created_at', 'updated_at',
-                      'account', 'chat_messages'}
+CONV_KEYS_EXPECTED = frozenset({'uuid', 'name', 'summary', 'created_at', 'updated_at',
+                                'account', 'chat_messages'})
+
+# ---------------------------------------------------------------------------
+# v1.1 field-level allowlists — key names verbatim from S14 s14_presence_rates.md
+# Source: population scan over both exports (baseline 22,801 msgs + 5-28 export 24,138 msgs /
+# 71,512 blocks); zero raw-vs-raw field drift confirmed by s14_field_drift_raw.py (2026-05-28)
+# ---------------------------------------------------------------------------
+
+# 9 keys, all 100% key-present (n=24,138 messages, full 5-28 export)
+MESSAGE_KEYS_EXPECTED = frozenset({
+    'attachments', 'content', 'created_at', 'files',
+    'parent_message_uuid', 'sender', 'text', 'updated_at', 'uuid',
+})
+
+# text block — 6 mandatory keys, all 100% key-present (n=30,448 blocks)
+TEXT_BLOCK_KEYS = frozenset({
+    'citations', 'flags', 'start_timestamp', 'stop_timestamp', 'text', 'type',
+})
+# citations_grouping_mode: optional (~0.14%, 43/30,448 blocks); absence must NOT trip drift
+TEXT_BLOCK_OPTIONAL_KEYS = frozenset({'citations_grouping_mode'})
+
+# 10 keys, all 100% key-present (n=14,271 blocks)
+THINKING_BLOCK_KEYS = frozenset({
+    'alternative_display_type', 'cut_off', 'flags', 'signature',
+    'start_timestamp', 'stop_timestamp', 'summaries', 'thinking', 'truncated', 'type',
+})
+
+# 17 keys, all 100% key-present (n=13,451 blocks)
+TOOL_USE_BLOCK_KEYS = frozenset({
+    'approval_key', 'approval_options', 'context', 'display_content', 'flags',
+    'icon_name', 'id', 'input', 'integration_icon_url', 'integration_name',
+    'is_mcp_app', 'mcp_server_url', 'message', 'name',
+    'start_timestamp', 'stop_timestamp', 'type',
+})
+
+# 16 keys, all 100% key-present (n=13,328 blocks)
+TOOL_RESULT_BLOCK_KEYS = frozenset({
+    'content', 'display_content', 'flags', 'icon_name', 'integration_icon_url',
+    'integration_name', 'is_error', 'mcp_server_url', 'message', 'meta', 'name',
+    'start_timestamp', 'stop_timestamp', 'structured_content', 'tool_use_id', 'type',
+})
+
+# 5 keys, all 100% key-present (n=14 across BOTH full exports — LOW-CONFIDENCE population;
+# a drift warning here is probably rare-type variance, verify manually before treating as
+# a real format break)
+TOKEN_BUDGET_BLOCK_KEYS = frozenset({
+    'flags', 'remaining', 'start_timestamp', 'stop_timestamp', 'type',
+})
+
+# tool_result.content[] item-type keys — distinct names avoid text-block/text-item collision
+# 3 keys, all 100% key-present (n=12,954 items)
+CONTENT_ITEM_TEXT_KEYS = frozenset({'text', 'type', 'uuid'})
+# 9 keys, all 100% key-present (n=4,210 items)
+CONTENT_ITEM_KNOWLEDGE_KEYS = frozenset({
+    'is_citable', 'is_missing', 'links', 'metadata', 'prompt_context_metadata',
+    'text', 'title', 'type', 'url',
+})
+# 5 keys, all 100% key-present (n=1,929 items)
+CONTENT_ITEM_LOCAL_RESOURCE_KEYS = frozenset({'file_path', 'mime_type', 'name', 'type', 'uuid'})
+# 2 keys, all 100% key-present (n=664 items)
+CONTENT_ITEM_IMAGE_KEYS = frozenset({'file_uuid', 'type'})
+# 4 keys, all 100% key-present (n=9 items — low-n, same manual-verify caveat as token_budget)
+CONTENT_ITEM_IMAGE_GALLERY_KEYS = frozenset({'images', 'is_expired', 'type', 'uuid'})
+
+# Dispatch: block-type → (mandatory_keys, optional_keys)
+_BLOCK_FIELD_ALLOWLISTS = {
+    'text':         (TEXT_BLOCK_KEYS,         TEXT_BLOCK_OPTIONAL_KEYS),
+    'thinking':     (THINKING_BLOCK_KEYS,     frozenset()),
+    'tool_use':     (TOOL_USE_BLOCK_KEYS,     frozenset()),
+    'tool_result':  (TOOL_RESULT_BLOCK_KEYS,  frozenset()),
+    'token_budget': (TOKEN_BUDGET_BLOCK_KEYS, frozenset()),
+}
+# Dispatch: content item-type → mandatory keys (no optional keys on any item type)
+_CONTENT_ITEM_FIELD_ALLOWLISTS = {
+    'text':           CONTENT_ITEM_TEXT_KEYS,
+    'knowledge':      CONTENT_ITEM_KNOWLEDGE_KEYS,
+    'local_resource': CONTENT_ITEM_LOCAL_RESOURCE_KEYS,
+    'image':          CONTENT_ITEM_IMAGE_KEYS,
+    'image_gallery':  CONTENT_ITEM_IMAGE_GALLERY_KEYS,
+}
+
+# Fix A: load-time coupling guard — KNOWN_*_TYPES and their field-allowlist dicts must cover
+# identical type sets. A mismatch causes a silent KeyError at runtime in _inspect_data's else
+# branch; assert fires loudly at import time instead with a clear diagnostic.
+assert set(KNOWN_BLOCK_TYPES) == set(_BLOCK_FIELD_ALLOWLISTS), (
+    f"KNOWN_BLOCK_TYPES vs _BLOCK_FIELD_ALLOWLISTS mismatch — "
+    f"missing from allowlists: {sorted(KNOWN_BLOCK_TYPES - set(_BLOCK_FIELD_ALLOWLISTS))} "
+    f"extra in allowlists: {sorted(set(_BLOCK_FIELD_ALLOWLISTS) - KNOWN_BLOCK_TYPES)}"
+)
+assert set(KNOWN_CONTENT_ITEM_TYPES) == set(_CONTENT_ITEM_FIELD_ALLOWLISTS), (
+    f"KNOWN_CONTENT_ITEM_TYPES vs _CONTENT_ITEM_FIELD_ALLOWLISTS mismatch — "
+    f"missing from allowlists: {sorted(KNOWN_CONTENT_ITEM_TYPES - set(_CONTENT_ITEM_FIELD_ALLOWLISTS))} "
+    f"extra in allowlists: {sorted(set(_CONTENT_ITEM_FIELD_ALLOWLISTS) - KNOWN_CONTENT_ITEM_TYPES)}"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -76,8 +171,34 @@ def _shape_assert(data, source_path):
     print(f"[Shape] conversations.json: {len(data)} convs, key shape OK")
 
 
+def _check_field_drift(object_type, mandatory_keys, optional_keys, observed_keys,
+                       conv_uuid, msg_uuid, drift_events):
+    """v1.1 field-level drift check for one object. Appends to drift_events and writes
+    stderr on mismatch. optional_keys may be absent without triggering missing-key drift
+    and may be present without triggering extra-key drift."""
+    missing = mandatory_keys - observed_keys
+    extra   = observed_keys - (mandatory_keys | optional_keys)
+    if not missing and not extra:
+        return
+    drift_events.append({
+        'drift_type':   'field_drift',
+        'object_type':  object_type,
+        'missing_keys': sorted(missing),
+        'extra_keys':   sorted(extra),
+        'conv_uuid':    conv_uuid,
+        'msg_uuid':     msg_uuid,
+    })
+    sys.stderr.write(
+        f"WARNING schema-drift: field_drift on {object_type} "
+        f"missing={sorted(missing)} extra={sorted(extra)} "
+        f"conv={conv_uuid[:8]} msg={msg_uuid[:8]}\n"
+    )
+
+
 def _inspect_data(data):
     """Count records and detect schema drift on loaded conv data.
+    v1.0: type-level drift (unknown block/item types).
+    v1.1: field-level drift (per-object-type key-set allowlists, warn-not-stop).
     Drift warnings surface to stderr. Returns (conv_count, message_count,
     content_block_count, drift_events). Does no file I/O."""
     conv_count = len(data)
@@ -90,33 +211,55 @@ def _inspect_data(data):
 
     drift_events = []
     for conv in data:
+        cu = conv.get('uuid', '')  # '' if missing — drift fires below, not KeyError
+        # v1.1: conv-level field drift
+        _check_field_drift('conversation', CONV_KEYS_EXPECTED, frozenset(),
+                           frozenset(conv.keys()), cu, '', drift_events)
         for msg in conv.get('chat_messages', []):
+            mu = msg.get('uuid', '')  # '' if missing — drift fires below, not KeyError
+            # v1.1: message-level field drift
+            _check_field_drift('message', MESSAGE_KEYS_EXPECTED, frozenset(),
+                               frozenset(msg.keys()), cu, mu, drift_events)
             for block in msg.get('content', []):
                 btype = block.get('type')
+                # v1.0: type-level check
                 if btype not in KNOWN_BLOCK_TYPES:
                     drift_events.append({
                         'drift_type': 'unknown_block_type',
                         'observed_type': btype,
-                        'conv_uuid': conv['uuid'],
-                        'msg_uuid': msg['uuid'],
+                        'conv_uuid': cu,
+                        'msg_uuid': mu,
                     })
                     sys.stderr.write(
                         f"WARNING schema-drift: unknown block type '{btype}' "
-                        f"conv={conv['uuid'][:8]} msg={msg['uuid'][:8]}\n"
+                        f"conv={cu[:8]} msg={mu[:8]}\n"
                     )
+                else:
+                    # v1.1: block field drift (known types only)
+                    mandatory, optional = _BLOCK_FIELD_ALLOWLISTS[btype]
+                    _check_field_drift(f'block:{btype}', mandatory, optional,
+                                       frozenset(block.keys()), cu, mu, drift_events)
                 if btype == 'tool_result':
                     for item in block.get('content', []):
                         itype = item.get('type')
+                        # v1.0: type-level check
                         if itype not in KNOWN_CONTENT_ITEM_TYPES:
                             drift_events.append({
                                 'drift_type': 'unknown_tool_result_content_item_type',
                                 'observed_type': itype,
-                                'conv_uuid': conv['uuid'],
-                                'msg_uuid': msg['uuid'],
+                                'conv_uuid': cu,
+                                'msg_uuid': mu,
                             })
                             sys.stderr.write(
                                 f"WARNING schema-drift: unknown tool_result.content[] "
-                                f"type '{itype}' conv={conv['uuid'][:8]} msg={msg['uuid'][:8]}\n"
+                                f"type '{itype}' conv={cu[:8]} msg={mu[:8]}\n"
+                            )
+                        else:
+                            # v1.1: content item field drift
+                            _check_field_drift(
+                                f'content_item:{itype}',
+                                _CONTENT_ITEM_FIELD_ALLOWLISTS[itype], frozenset(),
+                                frozenset(item.keys()), cu, mu, drift_events,
                             )
 
     return conv_count, message_count, content_block_count, drift_events
@@ -299,7 +442,11 @@ def stage1_freeze(source_path, source_export_sha256, snapshot_id, snapshot_dir,
     os.chmod(raw_path, 0o444)               # sealed read-only — invariant 5.1
     print(f"[Stage 1] raw.json written ({raw_path.stat().st_size:,} bytes) — sealed read-only")
 
-    # Write schema-drift.jsonl only when drift was detected (snapshot dir now exists)
+    # Write schema-drift.jsonl only when drift was detected (snapshot dir now exists).
+    # Fix C: two intentionally distinct event shapes coexist in this file, discriminated by
+    # drift_type. v1.0 type-level events: {drift_type, observed_type, conv_uuid, msg_uuid}.
+    # v1.1 field-level events: {drift_type, object_type, missing_keys, extra_keys, conv_uuid,
+    # msg_uuid}. Always check drift_type first before accessing type-specific fields.
     if drift_events:
         entries = [dict(snapshot_id=snapshot_id, **e) for e in drift_events]
         with open(snapshot_dir / 'schema-drift.jsonl', 'w', encoding='utf-8') as f:
