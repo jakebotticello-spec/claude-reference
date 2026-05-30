@@ -11,7 +11,24 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
-## 2026-05-29 — apparatus S17 (v1.3 delta + raw.json wipe — BUILT, PROVEN, SEALED)
+## 2026-05-30 — apparatus S18 (v1.1 field-level key-presence drift detection — BUILT, PROVEN, SEALED)
+
+**Scope:** `active/apparatus/apparatus_freeze_pipeline.py` (v1.3 → v1.4, commit `b5be049`, pushed); canon (ANCHOR v11→v12, S18→S19 handoff, this entry — OC-authored, Jake-committed). The floor was NOT touched (the build reads exports, never mutates the floor — still 2 snapshots / 24,463 records).
+
+**Change(s):**
+- **v1.1 built — field-level key-presence drift detection.** Extends the v1.0 type-level detector (unknown block type / unknown content-item type) with per-object-type key-presence allowlists: conv (7, pre-existing), message (9), the 5 block types (text 6+1 / thinking 10 / tool_use 17 / tool_result 16 / token_budget 5), and the 5 tool_result content-item types (text 3 / knowledge 9 / local_resource 5 / image 2 / image_gallery 4). Key names authored verbatim from S14's `s14_presence_rates.md`, fixture-confirmed against the full 5-28 export at population scale (zero divergence). 11 new constants + 2 dispatch dicts (`_BLOCK_FIELD_ALLOWLISTS`, `_CONTENT_ITEM_FIELD_ALLOWLISTS`) + new `_check_field_drift` helper, slotted into `_inspect_data`. `CONV_KEYS_EXPECTED` promoted set→frozenset (no functional change). +90/-12 lines.
+- **One optional carve-out:** `text.citations_grouping_mode` (~0.14%, 43/30,448) — its ABSENCE must not trip drift. Proven correct both directions (block with and without it both clean).
+- **Depth = top-level keys per object type only.** `display_content`'s nested structure is deliberately NOT walked (most-variable part of the schema; deferred to a possible v1.2). Top-level catches the floor-threatening drift.
+- **Severity = warn-not-stop.** Field drift appends to `drift_events` + writes `schema-drift.jsonl`; ingest proceeds (human-review signal, not a cred-class halt). Scans the FULL export, not the delta slice (a field drift on an untouched conv must be visible — same principle as the S17 type-level fix).
+- **Proven three ways:** clean gate = 0 field_drift across 325 convs / 24,138 msgs / 71,512 blocks (full 5-28 export, known drift-zero — not over-tight); negative test 4-of-4 = renamed key + added sibling + removed key + `uuid` removed from a non-index-0 record all CAUGHT; carve-out = both directions clean.
+- **`/code-review` clean above threshold; 3 scored-out findings fixed anyway before commit:** **B** (was 75) — defensive `uuid` access (`conv.get('uuid','')` / `msg.get('uuid','')`) so a missing `uuid` emits a `field_drift{missing_keys:['uuid']}` event instead of crashing — a drift detector must REPORT the drift it exists for, not die on it; a 4th negative-test case proves it. **A** (was 65) — load-time `assert` coupling `KNOWN_BLOCK_TYPES`/`KNOWN_CONTENT_ITEM_TYPES` to their allowlist dicts, so a future cold instance desyncing them fails LOUD at import, not mystery-at-runtime. **C** (was 25) — documented the intentional v1.0-vs-v1.1 `schema-drift.jsonl` shape split (`observed_type` vs `missing_keys`/`extra_keys`), discriminated by `drift_type`; comment only, no behavior change.
+- **Two thin-sample caveats recorded (watched, not blind spots):** `token_budget` (n=14 across BOTH full exports — net-new added zero, so this is the true population not an undersample) and `image_gallery` content-item (n=9) carry low-confidence annotations in-code. A drift warning on either is probably rare-type variance — verify before treating as a real format break. (The token_budget call: excluding the least-sure type creates a blind spot exactly where confidence is lowest; warn-not-stop makes *inclusion* the anti-undersample move.)
+- **Pipeline v1.3 → v1.4**, committed + pushed `b5be049`. Test script at `apparatus-scratch/s18_v11_tests.py`.
+- **Scrub-version seam NOT touched** — (a) is floor-independent (never resolves prior-snapshot records, never exercised `_build_seen_set`). The seam is exactly as it was at S17 close and remains pass-two (b)'s hard opening prerequisite.
+
+**Why:** v1.1 was the bounded, do-first half of pass two — closes the cross-export reliance gap the v1.0 type-level detector left open (a renamed/added/dropped field on a known object would have passed silently). The heavier half, scrub-vN overlays, was deliberately held for a fresh session (S19) because it opens on the immortal-floor-adjacent scrub-version seam fix and the overlay-vs-sealed-snapshot contract — fresh-head work, not a tired bolt-on. Same gate discipline as every prior build: verify-against-disk → plan-in-OC → build-in-CC → prove (clean + negative + carve-out) → /code-review → commit → push.
+
+
 
 **Scope:** `active/apparatus/apparatus_freeze_pipeline.py` (v1.2 → v1.3, commit `43306fa`, pushed); the floor (new sealed snapshot `delta-2026-05-28-a61498e6` + baseline raw.json backfill-wiped); canon (ANCHOR v10→v11, S17→S18 handoff, this entry — OC-authored, Jake-committed).
 
