@@ -252,7 +252,7 @@ Universal patterns. All cost real time to learn.
 CC has two review tools installed. Use them — quality in prod matters now.
 
 · **`/jedi-council`** (renamed from `/agent-review-panel`) — heavy, for gates. Use before push, before merge, before shipping a chunk, on architecture decisions. ~6-8 min per run, ~75k tokens. Plugin: `wan-huiyan/agent-review-panel` (v3.3.0+, installed at user scope). Natural language triggers: *"council review this," "red team this," "panel review this plan."* Add `deep` for web-research mode.
-· **`/code-review`** — light, for chunks. Every commit, every diff. 5 agents in parallel, confidence-scored at 80+. Anthropic-official.
+· **`/code-review`** — light, for chunks. Every commit, every diff. 5 agents in parallel, confidence-scored at 80+. Anthropic-official. **It reviews a GitHub PR, not a working tree** — its pipeline fetches the PR via `gh pr view`, reads the PR diff, and posts findings back as a PR comment. So a **pre-commit review gate needs a scratch branch + draft PR to point it at** — you cannot run it on uncommitted working-tree changes (a "diff" in the conceptual sense is not a `gh`-reachable diff). The pattern: commit to a scratch branch → `gh pr create --draft` → run the tool on the PR → land to main after ratification. **Invocation is the plugin-namespaced `code-review:code-review`**, NOT `Skill(skill="code-review")` — the bare form fails to load and a Claude that doesn't know this may wrongly report the tool "not installed" and substitute a hand-rolled review (apparatus S20 — don't accept the substitute; fix the invocation). (`/jedi-council` is likely PR-centric the same way — assume it needs a PR too until proven otherwise.)
 
 **Pair them:** `/code-review` daily, `/jedi-council` at gates. Don't run council every turn — burns the Max allowance and slows the loop to a crawl.
 
@@ -407,7 +407,9 @@ Be worth the lineage.
 
 ---
 
-*Last Updated: 5-28-26 by Jake: Rationale: queued since prior sessions; this session confirmed it empirically — the 1,982-row population dig re-derived every existing candidate and surfaced ZERO that expand the locked field. Resulted in Operating Rule (e).
+*Last Updated: 5-31-26 by apparatus S20 (Jake + orchestrator-Claude). §12 — documented that `/code-review` is PR-centric: it reviews a GitHub PR (fetches via `gh`, posts findings as a PR comment), so a pre-commit review gate needs a scratch-branch + draft-PR, NOT a bare working tree; and the correct invocation is the namespaced `code-review:code-review`, not `Skill(skill="code-review")` (the bare form fails and can be mis-reported as "not installed"). Earned by the S20 rung-7 detour (CC reported the tool missing + substituted a manual review; it was installed, wrong invocation; the real tool then ran clean on a draft PR).*
+
+*Prior: 5-28-26 by Jake: Rationale: queued since prior sessions; this session confirmed it empirically — the 1,982-row population dig re-derived every existing candidate and surfaced ZERO that expand the locked field. Resulted in Operating Rule (e).
 
 *Prior: 5-25-26 by apparatus S2 (Jake + orchestrator-Claude). §8 — added the project-scoped-retrieval rule (Anthropic search is project-boxed; git/CC/Supabase are project-agnostic; cross-project work runs non-project + CC-on-disk). §5.1 — added "the export-`project`-field that wasn't there" to the confabulation-examples list (export format asserted from memory; CC falsified it on the 348MB archive). Earned by the apparatus cross-project corpus build.*
 
