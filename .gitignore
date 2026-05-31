@@ -27,3 +27,6 @@ __pycache__/
 ## os junk
 .DS_Store
 Thumbs.db
+
+# apparatus local-only secrets (never commit)
+pipeline/secrets/
