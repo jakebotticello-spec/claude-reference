@@ -258,6 +258,8 @@ CC has two review tools installed. Use them — quality in prod matters now.
 
 **Note on the rename:** the slash command was renamed by editing `name:` in `SKILL.md` at the plugin's cache path. Plugin updates will overwrite this — re-edit after each update.
 
+· **CC `git add` permission-deny ≠ a commit wall** [apparatus S21]. If CC reports `git add` (or any git write) "denied," read the LITERAL error before concluding anything. A message of the form *"Permission to use PowerShell with command … has been denied"* is a **Claude Code permission-system interception** — the harness blocks the tool call before any shell runs (no git process, no exit code). That is a **settings rule**, not a missing capability. CC has committed for 20+ sessions; a hard "CC can't commit" claim contradicts that history and is almost certainly a misread of a settings deny. Fix: check `.claude/settings.json` and `.claude/settings.local.json` for a rule matching `git add` and allow it. **Do NOT route around it** by having Jake hand-run git in a pager — that's the S21 drift (it turned the co-pilot into the one typing byte-diffs, and a degraded workflow nearly sealed a commit over an unexplained `.git/index.lock` contradiction). Diagnose the deny, restore CC's lane, then commit. **General principle this instances: never inflate a one-time tool failure into a standing capability fact in a handoff** — the S20→S21 handoff did exactly that ("CC can't stage/commit"), and the false fact drove a wrong workaround a session later until the literal error debunked it.
+
 ---
 
 ## 13. Visualizations
@@ -407,7 +409,9 @@ Be worth the lineage.
 
 ---
 
-*Last Updated: 5-31-26 by apparatus S20 (Jake + orchestrator-Claude). §12 — documented that `/code-review` is PR-centric: it reviews a GitHub PR (fetches via `gh`, posts findings as a PR comment), so a pre-commit review gate needs a scratch-branch + draft-PR, NOT a bare working tree; and the correct invocation is the namespaced `code-review:code-review`, not `Skill(skill="code-review")` (the bare form fails and can be mis-reported as "not installed"). Earned by the S20 rung-7 detour (CC reported the tool missing + substituted a manual review; it was installed, wrong invocation; the real tool then ran clean on a draft PR).*
+*Last Updated: 5-31-26 by apparatus S21 (Jake + orchestrator-Claude). §12 — added the CC `git add` permission-deny note: a "Permission to use PowerShell … has been denied" message is a Claude Code settings interception (check `.claude/settings.json` / `settings.local.json`), NOT a git error and NOT a CC commit-capability wall (CC has committed 20+ sessions); do not route around it by hand-running git, diagnose the deny; and the general principle — never inflate a one-time tool failure into a standing capability fact in a handoff. Earned by the S21 relocation: the S20→S21 handoff's "CC can't stage/commit" line was an over-read that nearly drove a wrong workaround until the literal error debunked it.*
+
+*Prior: 5-31-26 by apparatus S20 (Jake + orchestrator-Claude). §12 — documented that `/code-review` is PR-centric: it reviews a GitHub PR (fetches via `gh`, posts findings as a PR comment), so a pre-commit review gate needs a scratch-branch + draft-PR, NOT a bare working tree; and the correct invocation is the namespaced `code-review:code-review`, not `Skill(skill="code-review")` (the bare form fails and can be mis-reported as "not installed"). Earned by the S20 rung-7 detour (CC reported the tool missing + substituted a manual review; it was installed, wrong invocation; the real tool then ran clean on a draft PR).*
 
 *Prior: 5-28-26 by Jake: Rationale: queued since prior sessions; this session confirmed it empirically — the 1,982-row population dig re-derived every existing candidate and surfaced ZERO that expand the locked field. Resulted in Operating Rule (e).
 

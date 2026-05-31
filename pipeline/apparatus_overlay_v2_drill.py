@@ -1,6 +1,7 @@
-# apparatus_overlay_v2_drill.py · v0.2 · apparatus S20 · 2026-05-31 · full-scale scrub-v2 overlay (N=all)
+# apparatus_overlay_v2_drill.py · v0.3 · apparatus S21 · 2026-05-31 · full-scale scrub-v2 overlay (N=all)
 # v0.1: Rung 5 — N=10 synthetic drill; Gates 1-4; scrub-v2/ minted from absent state
 # v0.2: Rung 6 — N=all (23,095 records); pre-delete guard + rm-then-rewrite; WANT _build_seen_set check; fix Unicode arrow in print
+# v0.3: S21 — relocated to /pipeline/ (executable code out of active/); path block updated
 import sys
 import json
 import re
@@ -8,9 +9,9 @@ import os
 import hashlib
 from pathlib import Path
 
-_HERE       = Path(__file__).parent           # active/
-_APPARATUS  = _HERE / 'apparatus'             # active/apparatus/ — pipeline location
-_REPO       = _HERE.parent                    # repo root (parent of active/)
+_HERE       = Path(__file__).parent           # pipeline/
+_APPARATUS  = _HERE                            # pipeline/ — pipeline now co-located
+_REPO       = _HERE.parent                     # repo root (parent of pipeline/)
 SNAPSHOTS   = _REPO / 'apparatus-archive' / 'snapshots'
 BASELINE_ID  = 'baseline-2026-05-25-ae015455'
 BASELINE_DIR = SNAPSHOTS / BASELINE_ID
