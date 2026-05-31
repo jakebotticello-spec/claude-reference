@@ -1,4 +1,4 @@
-# apparatus_freeze_pipeline.py · v1.5 · apparatus S19 · 2026-05-30 · scrub-version seam fix
+# apparatus_freeze_pipeline.py · v1.6 · apparatus S20 · 2026-05-31 · overlay capability milestone
 # v1.1: extracted _parse_and_inspect + _file_sha256; dry-run now exercises drift detection;
 #        stage1_freeze uses shutil.copyfile (baseline) / write_bytes (delta, filtered slice)
 # v1.2: moved to active/apparatus/ (canon, not scratch); idempotency check moved after
@@ -12,6 +12,8 @@
 #        key carve-out for text.citations_grouping_mode; warn-not-stop, same drift_events sink
 # v1.5: scrub-version seam fix in _build_seen_set — per-snapshot max-N glob replaces
 #        hardcoded SCRUB_VERSION; no behavioral change on current floor (scrub-v1 only)
+# v1.6: overlay capability proved end-to-end (Rungs 5-6, S20) — scrub-v2/ minted + scaled
+#        for baseline; _build_seen_set max-N seam confirmed on real floor; pass-two (b) closed
 
 import argparse
 import hashlib
