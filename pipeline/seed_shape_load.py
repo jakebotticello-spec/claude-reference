@@ -1,4 +1,5 @@
-# seed_shape_load.py · v1.0 · apparatus S22 · 2026-05-31 · production floor LOAD
+# seed_shape_load.py · v1.1 · apparatus S23 · 2026-05-31 · production floor LOAD
+# v1.1 S23: drop cross-table FK; orphan-check at gate (pre-flight on plan + in-txn re-prove). see ANCHOR FK RESOLVED.
 #
 # The real production ingest of the corpus floor into the locked apparatus-floor
 # Supabase project. Distinct from the S16 seed-shape HARNESS (a DROP-and-load test
@@ -83,9 +84,7 @@ CREATE TABLE floor_conv_messages (
     scrub_version       integer NOT NULL,
     created_at          text    NOT NULL,
     updated_at          text    NOT NULL,
-    PRIMARY KEY (snapshot_id, conv_uuid, msg_uuid),
-    CONSTRAINT fk_header FOREIGN KEY (snapshot_id, conv_uuid)
-        REFERENCES floor_conv_headers(snapshot_id, conv_uuid)
+    PRIMARY KEY (snapshot_id, conv_uuid, msg_uuid)
 )"""
 
 # --- Append-only hardening DDL (verbatim shape from the D9 lock) ------------
@@ -252,6 +251,24 @@ def main():
 
     print(f"TOTAL TO LOAD: {total_h} headers + {total_m} messages = {total_h + total_m} records\n")
 
+    # --- PRE-FLIGHT GATE: no-orphans, proven on the plan before any DB work -----
+    # The cross-table FK was dropped in v1.1 (see ANCHOR FK RESOLVED). Referential
+    # integrity is proven at the gate, not in the schema — same stance as the message
+    # tree's parent_uuid (D9). This is the PRIMARY gate: the plan in memory is the whole
+    # intended floor (both snapshots resolved), so this is the most faithful place to
+    # prove "every message's conv has a header somewhere on the floor." Conv-LEVEL,
+    # not snapshot-scoped: a message's conv needs SOME header anywhere on the floor.
+    header_convs = {r['conv_uuid'] for _, _, _, _, headers, _ in plan for r in headers}
+    message_convs = {r['conv_uuid'] for _, _, _, _, _, messages in plan for r in messages}
+    orphan_convs = sorted(message_convs - header_convs)
+    if orphan_convs:
+        sys.exit(
+            f"ERROR (pre-flight): source ndjson has messages whose conv_uuid has no "
+            f"header on the planned floor — {len(orphan_convs)} orphaned conv(s): "
+            f"{orphan_convs}. Nothing was written; no DB connection opened."
+        )
+    print(f"PRE-FLIGHT: no-orphans OK — all {len(message_convs)} message convs have a header on the planned floor.\n")
+
     db_url = read_db_url()
     if not db_url:
         sys.exit("ERROR: SUPABASE_DB_URL not found (pipeline/secrets/.env or shell env)")
@@ -309,8 +326,11 @@ def main():
             cur.execute(_DDL_HEADERS)
             cur.execute(_DDL_MESSAGES)
 
-            # 2) LOAD — all headers across all snapshots first (FK), then all messages
-            print("  [2/4] Load headers (all snapshots), then messages (FK-safe order)...")
+            # 2) LOAD — headers first, then messages. Header-first is no longer
+            # DB-enforced (cross-table FK dropped v1.1); kept because it matches the
+            # gate's mental model — headers define the convs, messages attach to them —
+            # and keeps the load order legible.
+            print("  [2/4] Load headers (all snapshots), then messages (headers-first)...")
             ins_h = ins_m = 0
             for sid, stype, rpath, sver, headers, messages in plan:
                 for chunk in _batched([hdr_params(r) for r in headers], BATCH_SIZE):
@@ -343,7 +363,24 @@ def main():
                     f"ERROR: pre-commit count mismatch — DB {db_h}h/{db_m}m vs "
                     f"plan {total_h}h/{total_m}m. Rolled back. Floor untouched."
                 )
+            # Belt-and-suspenders re-prove: the pre-flight gate already proved the SOURCE
+            # is orphan-free; this proves the WRITE matched that validated plan. If the
+            # pre-flight passed and THIS fails, the bug is in the insert path, not the source.
+            cur.execute(
+                "SELECT COUNT(DISTINCT m.conv_uuid) FROM floor_conv_messages m "
+                "WHERE NOT EXISTS (SELECT 1 FROM floor_conv_headers h "
+                "WHERE h.conv_uuid = m.conv_uuid)"
+            )
+            db_orphans = cur.fetchone()[0]
+            if db_orphans:
+                conn.rollback()
+                sys.exit(
+                    f"ERROR: post-insert DB orphan-check failed — {db_orphans} message "
+                    f"conv(s) have no header in the DB. The write did not match the "
+                    f"validated plan. Rolled back. Floor untouched."
+                )
             print(f"      DB has {db_h} headers + {db_m} messages — matches plan.")
+            print(f"      orphan re-prove: 0 message convs without a header — write matches plan.")
         # clean exit of the `with conn` block commits the whole transaction here
     print("  COMMITTED. Floor is laid.\n")
 

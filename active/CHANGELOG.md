@@ -11,6 +11,17 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-05-31 — SD34 (homelab / JAKE-STACK §8 drive-manifest restore)
+
+**Scope:** `JAKE-STACK.md` §8 — surgical edit. No other section, no other file's content touched (CHANGELOG footer + this entry only).
+**Change(s):**
+- **§8 drive inventory rebuilt into a real manifest.** The condensed one-liner (`PNY CS1311 240 / Crucial BX500 240 / Barracuda 750 / WD Black 640 / WD Caviar Green 1TB`) had silently dropped the **3× Kingston 120GB (UV400/SA400)** and **every per-drive role/trust note**. Restored from the SD15 9-drive inventory + the S17c/SD24 drive-role plan, split into SSD / HDD / found buckets.
+- **VM-expansion earmark made explicit:** the "256GB SATA earmarked for other CB VMs" = **PNY CS1311 240GB SSD → boot/VM**, Crucial BX500 240GB as partner. Recorded so the spinny-vs-non-spinny question is answerable from the hot layer instead of buried in a May handoff. A SATA **HDD** is explicitly NOT a peer to this earmark (random-I/O VM disks → re-introduces the §3 hang-debugging trap); spinners only OK under low-I/O VMs.
+- **Trust flags restored:** OCZ Vertex 2 = install-media only / don't-trust; WD Caviar Green 1TB = head-park-aggressive, retire-candidate / don't-trust; Barracuda 750 = Frigate target; WD Black 640 = §2 CB-backup candidate.
+- **5-31 office-excavation find logged:** Seagate Momentus ST9500423AS, 500GB, 7200rpm, 2.5" SATA, DOM 03/2012 = **e-waste/scratch** (spinny vs the SSD earmark; not the best CB-backup candidate either). Wipe before disposal (2012 pull, possible old data).
+- STACK footer: prior "Last Update: 5-29" demoted to "Prior:", new 5-31 (SD34) surgical-edit footer prepended.
+**Why:** Jake had a drive in hand and the answer (SSD earmark, not spinny) lived only in PK handoffs, not the reference file — the §8 condensation lost it. Capacities/models are from handoffs, NOT re-verified on-disk this session.
+
 ## 2026-05-31 — apparatus S21 (pipeline relocation: DONE-ON-DISK, UNCOMMITTED, PARKED — commit blocked on CC git-add deny)
 
 **Scope:** Attempted the S20-deferred pipeline relocation. Work done + verified on disk, **NOT committed** — parked on branch `review/pipeline-relocation-s21`. Canon authored this session (OC, for Jake to verify-commit-push): ANCHOR v14→v15, JAKE-RULES §12 + footer, this entry, S21→S22 handoff. **No floor mutation. No invariant moved. No prod commit landed.**
