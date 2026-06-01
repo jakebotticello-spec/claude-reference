@@ -1,5 +1,6 @@
-# seed_shape_load.py · v1.1 · apparatus S23 · 2026-05-31 · production floor LOAD
+# seed_shape_load.py · v1.2 · apparatus S23 · 2026-05-31 · production floor LOAD
 # v1.1 S23: drop cross-table FK; orphan-check at gate (pre-flight on plan + in-txn re-prove). see ANCHOR FK RESOLVED.
+# v1.2 S23: fix post-commit append-only probe — WHERE false matched 0 rows so the per-row trigger never fired (false negative); use a real-row DELETE via ctid, rolled back, so the trigger actually fires and the rejection is proven.
 #
 # The real production ingest of the corpus floor into the locked apparatus-floor
 # Supabase project. Distinct from the S16 seed-shape HARNESS (a DROP-and-load test
@@ -393,12 +394,20 @@ def main():
         delete_rejected = False
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM floor_conv_messages WHERE false")
+                # Real-row DELETE: WHERE false matches 0 rows, so a BEFORE-ROW trigger
+                # never fires and the probe self-passes (the S23 false negative). Target
+                # one real row via ctid so the immutable guard actually fires. The whole
+                # probe is rolled back — the floor is never mutated.
+                cur.execute(
+                    "DELETE FROM floor_conv_messages "
+                    "WHERE ctid IN (SELECT ctid FROM floor_conv_messages LIMIT 1)"
+                )
             conn.rollback()
+            print("  *** WARNING: real-row DELETE as owner was NOT rejected — append-only NOT enforced ***")
         except psycopg.errors.Error as e:
             delete_rejected = True
             conn.rollback()
-            print(f"  DELETE as owner rejected (expected): {type(e).__name__}")
+            print(f"  DELETE as owner rejected (expected): {type(e).__name__} — {str(e).splitlines()[0]}")
 
         with conn.cursor() as cur:
             cur.execute("SELECT current_user")
