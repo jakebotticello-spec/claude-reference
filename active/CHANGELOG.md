@@ -13,6 +13,52 @@ Format:
 ```
 
 
+## 2026-06-01 — apparatus S26 (Boot Kit RATIFIED v0.2→v1.0 then EXTENDED v1.0→v1.1 · The Progenitor v2→v3 · seeding pipeline restructured to 5-step dual-path · five per-window prompts + slicer kit · ANCHOR v19→v20)
+
+**Scope:** Ratification + canon session. **No floor mutation. No invariant moved. No application code committed.** Canon authored by OC, verified-against-disk by Jake, committed by CC, pushed to main by Jake at session close.
+
+**Change(s):**
+- `active/apparatus/Seeding_Council_Boot_Kit_v1.0_2026-06-01.md` (NEW — RATIFIED; supersedes v0.2, which stays on disk tombstoned-not-deleted alongside v0.1).
+- `active/apparatus/Boot_ScopeReader.md` (NEW — deployable per-window boot prompt for a scope-reader council window).
+- `active/apparatus/Boot_CrossCuttingReader.md` (NEW — deployable boot prompt for the cross-cutting reader).
+- `active/apparatus/Boot_JudgedPass.md` (NEW — deployable boot prompt for the non-blind judged pass; chain-assembly + recall checklist; portrait walled).
+- `active/apparatus/ANCHOR_apparatus.md` — v19→v20 (banner + new S26 READ-FIRST block, S25 block demoted to historical record; NEXT MOVE #4 updated to kit-ratified/prompts-authored/BUILD-active; v20 enshrine footer).
+- This entry; the S26→S27 handoff.
+
+**The three uncertainties resolved (S25 flagged them; S26 closed them):**
+- (i) **Judged-pass loadout → portrait WALLED.** The §4a judged pass is the only non-blind window = highest projection-risk, zero projection-need (chain-assembly = date-order+supersession; recall = checklist match). The one semantic recognition it needs runs off JAKE-STACK + canon, not the portrait.
+- (ii) **JAKE-RULES §11 wall → VERIFIED ON DISK.** §11 is "Patterns Jake Has Flagged," portrait-shaped; the S25 memory was accurate; §11 physically stripped from the council's JAKE-RULES copy.
+- (iii) **Keyword-coverage bar → ACCEPTED with downstream-miss measurement** (Jake's call: accept-and-proceed, not block). Unfalsifiable at lay-time, so measured in use via logged §10-Case-1 retrieval misses; homed as entry 1 on the new maintenance-pass list (Boot Kit §9).
+
+**Also decided:** council runs as CC against the live floor — kit-by-upload, floor-by-CC-query, bare boot (no project instructions / no repo path) = physical enforcement of §13 blindness. Standing call: OC+Jake live-spot-check seeding output window-by-window against the convergence map.
+
+**Why:** Graduate the boot kit out of draft so seeding can proceed — meticulous and methodical, but not molasses.
+
+**SAME SESSION (cont.) — THE SEEDING PIPELINE WAS RESTRUCTURED (Progenitor v2→v3, Boot Kit v1.0→v1.1):**
+
+**Additional change(s):**
+- `active/apparatus/The_Progenitor_v3_2026-06-01.md` (NEW — supersedes v2, tombstoned-not-deleted; §0–§11 BYTE-IDENTICAL to v2, diff-proven; §12/§13 rewritten to the 5-step dual-path pipeline).
+- `active/apparatus/Seeding_Council_Boot_Kit_v1.1_2026-06-01.md` (NEW — extends v1.0, tombstoned; 5-step pipeline, role roster expanded).
+- `active/apparatus/Boot_Collation.md` (NEW — Step 3 blind collation).
+- `active/apparatus/Boot_ClusterValidation.md` (NEW — Step 4 contextual validation, portrait-walled).
+- `active/apparatus/Boot_ScopeReader.md` — bumped v1.0→v1.1 (added the dual-output: context-frequency-potentials stream).
+- `active/apparatus/Boot_CrossCuttingReader.md` — bumped v1.0→v1.1 (added dual-output + the cross-domain fence-influence stream; role KEPT, Jake's call).
+- `active/apparatus/Boot_JudgedPass.md` — refs bumped to v3/v1.1 (Step 5; job unchanged).
+- `slicer/README_slicer_kit.md` (NEW — the slicer dir instruction file; the dir holds the §11-stripped JAKE-RULES + JAKE-STACK Jake placed).
+- `active/apparatus/ANCHOR_apparatus.md` — v20 banner + S26 READ-FIRST + PROGENITOR ref + NEXT MOVE #4 + the single S26 footer all extended to carry the pipeline rewrite (one session = one anchor version; folded, not stacked as a separate v21).
+
+**The structural finding that forced it:** content-neutral count-slicing (required to kill projection) makes a corpus-wide-but-sparse texture land ~1× per slice and evaporate between blind slicers. No slice-reader sees frequency wider than its slice; it's structural, not a granularity knob. Fix: texture detection leaves the slice-reader for a downstream comprehending path. The worst case carried into doctrine: the same texture surfaces in non-keyword-sharing language ("forgot Griffin" / "pissed he missed another pickup") — the most acute instance shares no keyword — so the texture path must COMPREHEND, not COUNT. (OC flagged itself reaching for an austere keyword-tally; Jake caught it with the "austere or organic / cookie-cutter or auxiliary brain" check. The apparatus is Jake's auxiliary brain, beta 1.0 — not a cookie-cutter index.)
+
+**The 5-step dual-path pipeline:** S1 slicers + cross-cutting reader DUAL-OUTPUT (pointers + liberal context-frequency potentials; cross-cutting reader adds cross-domain fence-influence) → S2 mechanical FENCE synthesis ‖ S3 blind COLLATION (fuzzy-over-bundle into clusters + formulate negative-space queries, never reads floor) → S4 contextual CLUSTER-VALIDATION (pull spans, run queries, validate/split into textures, self-merge recorded, portrait-walled) → S5 the JUDGE (unchanged). Two pointer kinds → two mirrored validation paths → one judge. Projection defused structurally (S3 all-flags-no-meaning; S4 meaning-but-handed-clusters-only).
+
+**Self-caught drop (recorded honestly):** OC silently dropped the cross-cutting reader from the v1.1 draft roster; caught it on a self-check, flagged it to Jake as a real call rather than papering over it; Jake kept the role (it owns cross-domain fence-influence, the one connection no other step catches). Restored deliberately across the kit + Progenitor v3 + its boot prompt.
+
+**Slicing:** LOCKED count-based (~2,000/slice, ~12, calendar-blind, forest-clean) on a prior run's empirical cliff-shaped May distribution (heavy-Claude onset; time-window slicing would fry the May reader). Gate-1 CC recon authored (read-only) to confirm the queryable cut-on designator before any x→y bound. Pilot slice runs first.
+
+**Build is the next front** (seeding-slice manifest mechanism + the dual-path mechanisms / engine keyword resolver), CC-against-the-live-floor.
+
+**Process note:** CDN served a stale tarball at S26 boot (the S25→S26 handoff file wasn't present in the first pull); caught by the filename-mismatch tripwire, re-pulled clean. Disk/HEAD over CDN — the fourth time this lineage. Jake owns the verify/download/commit/push-habit gap; the standing fix is: after any push, the next action is a disk/HEAD re-read before reasoning.
+
 ## 2026-06-01 — apparatus S25 (The Progenitor v1→v2 · retrieval engine conceptual design complete · seeding-council boot kit v0.1→v0.2 · ANCHOR v18→v19)
 
 **Scope:** Design + canon session. **No floor mutation. No invariant moved. No application code committed.** Canon authored by OC, verified-against-disk by Jake, committed by CC, and **pushed to main by Jake at session close** (push confirmed live on main): `active/apparatus/The_Progenitor_v2_2026-06-01.md` (NEW — supersedes v1, which stays on disk tombstoned-not-deleted), `active/apparatus/Seeding_Council_Boot_Kit_v0.1_2026-06-01.md` then `active/apparatus/Seeding_Council_Boot_Kit_v0.2_2026-06-01.md` (v0.2 supersedes v0.1 in-session; v0.1 tombstoned-not-deleted), ANCHOR v18→v19, this entry, the S25→S26 handoff. (Amended post-push: this entry originally described only boot-kit v0.1 with the 6 review changes "queued for v0.2"; v0.2 was then built and pushed in the same session, so the entry is corrected to reflect what actually shipped.)
