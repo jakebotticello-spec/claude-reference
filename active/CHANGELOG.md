@@ -11,6 +11,20 @@ Format:
 - [bullet of what changed]
 **Why:** [one-line context if not obvious]
 ```
+## 2026-06-01 — apparatus S23 (FLOOR LAID · hollow enforcement-probe caught & fixed · loader committed)
+
+**Scope:** `pipeline/seed_shape_load.py` (v1.0→v1.2, committed+pushed), the live `apparatus-floor` Supabase (floor laid), `apparatus/ANCHOR_apparatus.md` (v16→v17), this CHANGELOG, the S23→S24 handoff.
+**Change(s):**
+- **THE FLOOR IS LAID.** `--execute` ran against the live `apparatus-floor` project: single transaction, CREATE both tables → 325 headers + 24,138 messages (baseline scrub-v2 22,801 / delta scrub-v1 1,337) → append-only hardening (guard fn + BEFORE DELETE/UPDATE triggers on both tables + REVOKEs) → pre-commit count check + orphan re-prove PASSED → COMMITTED. The FK option-(c) move (drop cross-table FK, enforce no-orphans at the gate) is now proven on a real laid floor.
+- **Cold-read finding: the parked FK edit was ALREADY APPLIED.** The loader pulled from HEAD was already v1.1 (FK clause gone, orphan-checks present). The S22 handoff's "loader is v1.0 / one edit from sealed" was stale. Caught by reading the file, not trusting the report.
+- **THE S23 FINDING — hollow enforcement probe.** The loader's post-commit append-only self-test was `DELETE … WHERE false` — 0 rows, so the BEFORE-ROW guard never fired and the probe self-passed. A hollow proof. Caught by an unguided fresh-eyes pass (run deliberately to stress-test the path).
+- **Loader v1.1→v1.2 fix.** Replaced the hollow probe with a real-row `ctid`-targeted DELETE, rolled back (floor never mutated); WARNING on no-rejection, guard error-text on expected-rejection.
+- **The scar, recorded straight (Jake's call: keep the floor).** Live floor laid under the hollow probe (false NOT ENFORCED at lay); enforcement independently validated post-lay by the identical `ctid` DELETE-as-`postgres` op (rejected `InsufficientPrivilege — immutable floor`), both triggers attached, count unchanged. Role-delta theory KILLED (all connects same `postgres` url, no `SET ROLE`). Native in-run proof deferred to the next lay (loader correctly refuses re-execute onto a live floor).
+- **Loader committed + pushed.** The whole v1.0→v1.2 delta was uncommitted at lay-time (HEAD was `ce6fcbd`, the S22 v1.0 commit). Committed onto `s23-loader-v1.2-fk-drop-probe-fix` with the provenance (floor-laid-before-this-commit / born-under-hollow-probe / independently-validated) in the commit message; pushed.
+- **ANCHOR v16→v17**; new settled invariant enshrined (*an enforcement self-test must attempt to mutate a REAL row*); blind-authored mid-session "v17"/handoff drafts QUARANTINED as DRAFT-UNVERIFIED.
+**Why:** S23 was scoped to author one FK edit and lay the floor. The edit was already done; the floor laid; the real work was catching that the loader's own append-only proof was hollow, fixing it, and committing the loader that laid an immutable floor but existed nowhere in git. Next chapter: the retrieval layer.
+
+```
 ## 2026-05-31 — SD34 (homelab / JAKE-STACK §8 drive-manifest restore)
 
 **Scope:** `JAKE-STACK.md` §8 — surgical edit. No other section, no other file's content touched (CHANGELOG footer + this entry only).
