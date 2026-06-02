@@ -13,7 +13,30 @@ Format:
 ```
 
 
-## 2026-06-01 — apparatus S26 (Boot Kit RATIFIED v0.2→v1.0 then EXTENDED v1.0→v1.1 · The Progenitor v2→v3 · seeding pipeline restructured to 5-step dual-path · five per-window prompts + slicer kit · ANCHOR v19→v20)
+## 2026-06-01 — apparatus S27 (THE PILOT INVERTED THE ADMISSION PREMISE · The Progenitor v3→v4 · Boot_ScopeReader v2.0→v2.1 · E1 absorbed+graveyarded · ANCHOR v20→v21)
+
+**Scope:** Seeding-build opening + a foundational doctrine inversion proven on real data. **No floor mutation. No engine/trigger/return-shape moved.** The admission BAR inverted; the pipeline machinery untouched. Canon authored by OC, verified-against-disk by Jake, committed by CC, pushed to main by Jake.
+
+**Change(s):**
+- `active/apparatus/The_Progenitor_v4_2026-06-01.md` (NEW — supersedes v3, tombstoned-not-deleted). SURGICAL: §1, §2, §4 record-shapes, §5-mechanism, §6, §7, §10, §11 BYTE-IDENTICAL to v3. INVERTED §0 (one-line law → comprehensive semantic graph, default NODE). NEW §0.5 (organic-over-austere as a standing INTOLERABLE failure mode — read before §3). REWROTE §3 (absorbed E1: default-NODE admission gate, behavioral keep/drop signals, fence/texture DEMOTED to salience tags, MOTION as a light node kind, §3.3 precise-fence-anchor, §3.4 volume inverted to many-thousands, no-quarantine-on-personal-material). AMENDED §5 (corpus-search = rare-miss net, not selectivity license), §8 + §12-guard-3 (bar restatements inverted). Full graveyard of the dead austere text.
+- `slicer/Boot_ScopeReader.md` v2.0→v2.1 (NEW content — the §3.3 precise-fence-anchor augment-in-pass; references Progenitor v4 directly now that E1 is absorbed).
+- `active/apparatus/ANCHOR_apparatus.md` — v20→v21 (banner + S27 READ-FIRST block, S26 demoted to historical; PROGENITOR invariant block + THE BAR line flipped to v4; NEXT MOVE #4 rewritten to design-proven/mechanical-run-active; post-lock #7 + NEXT MOVE #5 password closed; four S27 graveyard entries; v21 enshrine footer).
+- E1_Admission_Standard_S27 — ABSORBED into Progenitor v4 §3 and graveyarded as a standalone (it was the bridge artifact; §3 is its canonical home).
+- This entry; the S27→S28 handoff.
+
+**What happened (the pilot earned its keep):**
+- Gate-1 recon (read-only) confirmed the floor live + NO monotonic column → slicing is conversation-bounded / created_at-ordered / accumulate-to-~2,000. Slice manifest built + integrity-proven (`pipeline/recon/slice_manifest_S27.json`): 12 slices, 325 convs placed once, 24,138 reconciled, forests whole, all 325 sliced WHOLE (3 empties included, no exclusion pass).
+- Slice-7 PILOT under the v3 austere bar → 1 node / 21 convs, losing fences buried in dropped conversations. Jake named the error (cataloging-not-filtering); the admission premise inverted.
+- 2-panel double-blind Jedi-Council ratified PRESENCE-over-SERVICE (both austere-biased panels, same ruling; dismantled four weak joints in the brief; raised Panel-1's don't-build-austere-in-disguise flag).
+- Slice-7 RE-RUN under the inverted bar → 41 nodes / 0 drops, catching the fences the austere bar was blind to. Design proven on real data.
+- NO QUARANTINE ratified: personal/medical/family material is texture, cataloged like everything else; only mistakenly-pasted creds excluded (scrub-vN at ingestion).
+- S16-leaked DB password CLOSED (rotated 2× since the leak; post-lock #7 done).
+
+**Why:** The austere reflex is the documented bug of this lineage (Track Meet Doctrine §§5–6). v3's §3 was a faithful implementation of a wrong premise; the pilot proved it amputated the auxiliary brain the Wallaby Why mandates. v4 inverts the premise and enshrines the failure mode so the next Claude fights the reflex instead of drifting back to it.
+
+**S27→S28 (settled litigation — ACT, don't re-litigate):** (1) re-run slice 7 under v2.1 to confirm the precise-fence-anchor fix; (2) stamp + run slices 1–6, 8–11 under v2.1 (mechanical); (3) the downstream pipeline (Steps 3/4/5). Do not re-open the axis, the bar, the no-quarantine call, or the slicing mechanism — all settled S27.
+
+
 
 **Scope:** Ratification + canon session. **No floor mutation. No invariant moved. No application code committed.** Canon authored by OC, verified-against-disk by Jake, committed by CC, pushed to main by Jake at session close.
 
